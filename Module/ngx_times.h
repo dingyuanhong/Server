@@ -17,7 +17,6 @@ typedef struct {
     ngx_int_t   gmtoff;
 } ngx_time_t;
 
-
 void ngx_time_init(void);
 void ngx_time_update(void);
 void ngx_time_sigsafe_update(void);

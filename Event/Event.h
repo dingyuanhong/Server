@@ -27,13 +27,13 @@ typedef struct event_s{
 
 #include "../Core/Core.h"
 
-inline event_t * createEvent(event_handler_pt handler,void* data)
+inline void initEvent(event_t *event,event_handler_pt handler,void* data)
 {
-	event_t * event = MALLOC(sizeof(event_t));
 	memset(event,0,sizeof(event_t));
 	event->data = data;
 	event->handler = handler;
 	event->index = EVENT_INVALID_INDEX;
+	ngx_queue_init(&event->queue);
 
 	// event->flags = 0;
 	//
@@ -41,8 +41,12 @@ inline event_t * createEvent(event_handler_pt handler,void* data)
 	// event->timedout = 0;
 	// event->timer_set = 0;
 	// event->cancelable = 0;
-	ngx_queue_init(&event->queue);
+}
 
+inline event_t * createEvent(event_handler_pt handler,void* data)
+{
+	event_t * event = MALLOC(sizeof(event_t));
+	initEvent(event,handler,data);
 	return event;
 }
 
