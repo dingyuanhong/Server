@@ -80,7 +80,7 @@ int error_event_handler(event_t *ev)
 	if(ret == 0)
 	{
 		connection_close(c);
-		LOGD("error close.\n");
+		// LOGD("error close.\n");
 	}else
 	{
 		LOGE("error close failed %d errno:%d\n",ret,errno);
@@ -98,7 +98,7 @@ int cycle_handler(event_t *ev)
 	}
 
 	connection_t *conn = createConn(cycle,fd);
-	conn->so.read = createEvent(read_event_handler,conn);
+	conn->so.read = createEvent(error_event_handler,conn);
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	add_connection(conn);

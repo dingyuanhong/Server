@@ -1,9 +1,6 @@
 #include "Core/Core.h"
 #include "Event/EventActions.h"
 #include "Module/module.h"
-// #define __USE_UNIX98 1
-// #define __USE_XOPEN2K 1
-#include <pthread.h>
 #include "Core/thread.h"
 
 #define MAX_FD_COUNT 1024*1024
@@ -11,8 +8,6 @@ static int max_thread_count = 0;
 ngx_array_t *cycle_pool = NULL;
 int cycle_pool_index = 0;
 ngx_array_t *thread_pool = NULL;
-
-int connection_post(cycle_t *cycle,SOCKET fd);
 
 static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 {
@@ -22,7 +17,7 @@ static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 	return NULL;
 }
 
-#include <pthread.h>
+int connection_post(cycle_t *cycle,SOCKET fd);
 
 int connection_close_handler(event_t *ev)
 {
@@ -57,7 +52,7 @@ int error_event_handler(event_t *ev)
 	if(ret == 0)
 	{
 		connection_close(c);
-		// LOGD("error close success\n");
+		// LOGD("error close.\n");
 	}else
 	{
 		LOGE("error close failed %d errno:%d\n",ret,errno);
@@ -124,6 +119,7 @@ void cycle_thread_cb(void* arg)
 
 void add_connection_event(cycle_t * cycle,event_t *ev)
 {
+	// LOGD("add_connection_event.\n");
 	SOCKET fd = (SOCKET*)ev->data;
 	deleteEvent(&ev);
 	connection_t * conn = createConn(cycle,fd);
