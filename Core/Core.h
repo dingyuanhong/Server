@@ -3,6 +3,19 @@
 
 #include <stdint.h>
 
+#ifdef __linux__
+#include<sys/time.h>
+#include<sys/resource.h>
+#include<unistd.h>
+#endif
+
+#define ngx_pid_t uint32_t
+typedef uint32_t u_int;
+// typedef uint32_t u_long;
+
+#define ngx_min min
+#define ngx_cdecl
+
 #define  NGX_OK          0
 #define  NGX_ERROR      -1
 #define  NGX_AGAIN      -2
@@ -44,18 +57,7 @@ typedef ngx_rbtree_key_int_t  ngx_msec_int_t;
 #define CR     (u_char) '\r'
 #define CRLF   "\r\n"
 
-#ifdef __linux__
-#define ngx_pid_t uint32_t
-typedef uint32_t u_int;
-typedef uint32_t u_long;
 
-#define ngx_min min
-#define ngx_cdecl
-
-#include<sys/time.h>
-#include<sys/resource.h>
-#include<unistd.h>
-#endif
 
 #include "ngx_string.h"
 

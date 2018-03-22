@@ -40,7 +40,7 @@ ngx_array_init(ngx_array_t *array, ngx_uint_t n, size_t size)
     if (array->elts == NULL) {
         return NGX_ERROR;
     }
-
+	MEMSET(array->elts,0,n * size);
     return NGX_OK;
 }
 

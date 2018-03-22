@@ -29,7 +29,7 @@ void connection_close(connection_t *c){
 	add_event(c->cycle,timer);
 }
 
-int read_handler(event_t *ev)
+int read_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	while(1){
@@ -73,14 +73,14 @@ int read_handler(event_t *ev)
 	return 1;
 }
 
-int error_handler(event_t *ev)
+int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	socket_t * so = &c->so;
 	int ret = del_connection(c);
 	if(ret == 0)
 	{
 		connection_close(c);
+		LOGD("error close.\n");
 	}else
 	{
 		LOGE("error close failed %d errno:%d\n",ret,errno);
@@ -98,9 +98,9 @@ int cycle_handler(event_t *ev)
 	}
 
 	connection_t *conn = createConn(cycle,fd);
-	conn->so.read = createEvent(read_handler,conn);
+	conn->so.read = createEvent(read_event_handler,conn);
 	conn->so.write = NULL;
-	conn->so.error = createEvent(error_handler,conn);
+	conn->so.error = createEvent(error_event_handler,conn);
 	add_connection(conn);
 
 	add_event(cycle,ev);

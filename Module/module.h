@@ -109,4 +109,24 @@ inline int cicle_process(cycle_t * cycle)
 	return 0;
 }
 
+inline int cicle_process_loop(cycle_t * cycle)
+{
+	while(1){
+		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
+		if(timeout == NGX_TIMER_INFINITE)
+		{
+			timeout = 10;
+		}
+		int ret = action_process(cycle->core,timeout);
+		if(ret == -1)
+		{
+			break;
+		}
+		ngx_event_expire_timers(&cycle->timeout);
+		safe_process_event(cycle);
+		ngx_event_process_posted(&cycle->posted);
+	}
+	return 0;
+}
+
 #endif
