@@ -29,10 +29,19 @@
 
 static inline void ngx_event_process_posted(ngx_queue_t *posted)
 {
-	ngx_queue_t  *q;
+	ngx_queue_t *q;
 	event_t  *ev;
-	while (!ngx_queue_empty(posted)) {
-		q = ngx_queue_head(posted);
+
+	ngx_queue_t tmp;
+	ngx_queue_t *queue_ev = &tmp;
+	ngx_queue_init(queue_ev);
+	ngx_queue_add(queue_ev,posted);
+	ngx_queue_init(posted);
+
+	// ngx_queue_t *queue_ev = posted;
+
+	while (!ngx_queue_empty(queue_ev)) {
+		q = ngx_queue_head(queue_ev);
 		ev = ngx_queue_data(q, event_t, queue);
 		ngx_delete_posted_event(ev);
 		ev->handler(ev);

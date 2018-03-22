@@ -4,39 +4,14 @@
 
 #define MAX_FD_COUNT 1024*1024
 
-int cicle_process(cycle_t * cycle)
-{
-	while(1){
-		ngx_time_update();
-		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
-		if(timeout == NGX_TIMER_INFINITE)
-		{
-			timeout = 10;
-		}
-		int ret = action_process(cycle->core,timeout);
-		if(ret == -1)
-		{
-			break;
-		}
-		ngx_time_update();
-		ngx_event_expire_timers(&cycle->timeout);
-		safe_process_event(cycle);
-		ngx_event_process_posted(&cycle->posted);
-
-		if(cycle->connection_count == 0 && event_is_empty(cycle) && timer_is_empty(cycle))
-		{
-			break;
-		}
-	}
-	return 0;
-}
-
 int connection_close_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	int ret = 0;
-	ret = shutdown(c->so.handle,SHUT_RDWR);
-	LOGD("shutodwn %d\n",ret);
+	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
+	LOGA(ret == 0,"socket_linger %d\n",ret);
+	// ret = shutdown(c->so.handle,SHUT_WR);
+	// LOGA(ret == 0,"shutodwn %d\n",ret);
 	ret = close(c->so.handle);
 	if(ret == 0)
 	{
@@ -45,13 +20,13 @@ int connection_close_handler(event_t *ev)
 		deleteEvent(&ev);
 	}else{
 		LOGD("connection closing:%d\n",c->so.handle);
-		add_timer(c->cycle,ev,1);
+		add_event(c->cycle,ev);
 	}
 }
 
 void connection_close(connection_t *c){
 	event_t * timer = createEvent(connection_close_handler,c);
-	add_timer(c->cycle,timer,1);
+	add_event(c->cycle,timer);
 }
 
 int read_handler(event_t *ev)
@@ -75,7 +50,6 @@ int read_handler(event_t *ev)
 			ret = del_connection(c);
 			if(ret == 0){
 				connection_close(c);
-				LOGD("close ok.\n");
 			}else{
 				LOGD("recv %d errno:%d\n",ret,errno);
 			}
@@ -90,7 +64,6 @@ int read_handler(event_t *ev)
 			ret = del_connection(c);
 			if(ret == 0){
 				connection_close(c);
-				LOGD("close ok.\n");
 			}else{
 				LOGD("recv %d errno:%d\n",ret,errno);
 			}
@@ -119,8 +92,8 @@ int cycle_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
 	SOCKET fd = socket_connect("tcp","127.0.0.1:888",0);
-	LOGD("socket:%d\n",fd);
 	if(fd == -1){
+		add_event(cycle,ev);
 		return -1;
 	}
 
@@ -129,6 +102,8 @@ int cycle_handler(event_t *ev)
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_handler,conn);
 	add_connection(conn);
+
+	add_event(cycle,ev);
 	return 0;
 }
 

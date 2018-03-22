@@ -106,26 +106,26 @@ void epoll_module_event_handler(event_t *ev)
 #ifdef EPOLLRDHUP
 		if(events & EPOLLRDHUP)
 		{
-			LOGD("EPOLLRDHUP trigger.");
+			LOGD("EPOLLRDHUP trigger.\n");
 			so->read->handler(so->read);
 		}
 		else
 #endif
 		if(events & EPOLLHUP)
 		{
-			LOGD("EPOLLHUP trigger.");
+			LOGD("EPOLLHUP trigger.\n");
 			so->error->handler(so->error);
 		}
 		else
 		if(events & EPOLLERR)
 		{
-			LOGD("EPOLLERR trigger.");
+			LOGD("EPOLLERR trigger.\n");
 			so->error->handler(so->error);
 		}
 		else
 		if(events & EPOLLPRI)
 		{
-			LOGD("EPOLLPRI trigger.");
+			LOGD("EPOLLPRI trigger.\n");
 			//带外数据
 			so->error->handler(so->error);
 		}

@@ -159,7 +159,7 @@ int select_module_process(select_module_t * module,int milliseconds)
 	}
 	else if(n < 0)
 	{
-		LOGE("select wait errno:%d",errno);
+		LOGE("select wait errno:%d\n",errno);
 		return -1;
 	}
 	module->events_count = n;

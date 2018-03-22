@@ -91,7 +91,7 @@ int kqueue_module_process(kqueue_module_t * module,int milliseconds)
 	}
 	else if(n < 0)
 	{
-		LOGE("kevent wait errno:%d",errno);
+		LOGE("kevent wait errno:%d\n",errno);
 		return -1;
 	}
 	module->events_count = min(n,events_count);

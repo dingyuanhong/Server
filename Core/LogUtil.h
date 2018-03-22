@@ -45,6 +45,8 @@ extern LOGM_PRINTF g_log_print;
 #define LOGD(FMT,...) LOG(LOG_DEBUG,FMT,##__VA_ARGS__)
 #define LOGI(FMT,...) LOG(LOG_INFO,FMT,##__VA_ARGS__)
 
+#define LOGA(_exp,FMT,...) {if((!(_exp))) LOG(LOG_ASSERT, FMT,##__VA_ARGS__);}
+
 #define ABORTL(FMT,...) {LOG(LOG_CRIT,"abort "#FMT,##__VA_ARGS__);abort();}
 
 #define ABORTM(_exp) {if((_exp)) ABORTL(#_exp);}

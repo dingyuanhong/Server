@@ -56,22 +56,19 @@ static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_
 	ngx_spinlock(&cycle->accept_posted_lock,1,0);
 	ngx_post_event(&sev->self,&cycle->accept_posted);
 	cycle->accept_posted_index += 1;
-	// ngx_atomic_fetch_add(&cycle->accept_posted_index,1);
 	ngx_unlock(&cycle->accept_posted_lock);
 }
 
 static inline void safe_process_event(cycle_t *cycle)
 {
-	// ngx_atomic_uint_t old = ngx_atomic_fetch_add(&cycle->accept_posted_index,0);
 	if(cycle->accept_posted_index > 0)
 	{
 		ngx_spinlock(&cycle->accept_posted_lock,1,0);
 		// if(ngx_trylock(&cycle->accept_lock))
 		{
 			ngx_queue_add(&cycle->posted,&cycle->accept_posted);
-			ngx_queue_remove(&cycle->accept_posted);
+			ngx_queue_init(&cycle->accept_posted);
 
-			// ngx_atomic_cmp_set(&cycle->accept_posted_index,old,0);
 			cycle->accept_posted_index = 0;
 			ngx_unlock(&cycle->accept_posted_lock);
 		}
@@ -84,5 +81,32 @@ static inline void safe_process_event(cycle_t *cycle)
 
 #define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
+
+inline int cicle_process(cycle_t * cycle)
+{
+	while(1){
+		ngx_time_update();
+		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
+		if(timeout == NGX_TIMER_INFINITE)
+		{
+			timeout = 10;
+		}
+		int ret = action_process(cycle->core,timeout);
+		if(ret == -1)
+		{
+			break;
+		}
+		ngx_time_update();
+		ngx_event_expire_timers(&cycle->timeout);
+		safe_process_event(cycle);
+		ngx_event_process_posted(&cycle->posted);
+
+		if(cycle->connection_count == 0 && event_is_empty(cycle) && timer_is_empty(cycle))
+		{
+			break;
+		}
+	}
+	return 0;
+}
 
 #endif
