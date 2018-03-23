@@ -94,18 +94,18 @@ int cycle_handler(event_t *ev)
 	cycle_t *cycle = (cycle_t*)ev->data;
 	SOCKET fd = socket_connect("tcp","10.0.2.6:888",1);
 	if(fd == -1){
-		add_event(cycle,ev);
+		add_timer(cycle,ev,1);
 		return -1;
 	}
-
+	LOGD("socket connect %d\n",fd);
 	connection_t *conn = createConn(cycle,fd);
 	conn->so.read = createEvent(error_event_handler,conn);
-	conn->so.write = NULL;
+	conn->so.write = createEvent(error_event_handler,conn);
 	conn->so.error = createEvent(error_event_handler,conn);
-	int ret = add_connection(conn);
+	int ret = add_connection_event(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
 
-	add_event(cycle,ev);
+	// add_timer(cycle,ev,1);
 	return 0;
 }
 

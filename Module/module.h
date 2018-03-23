@@ -7,6 +7,16 @@
 #include "ngx_event_posted.h"
 #include "ngx_times.h"
 
+inline int add_connection_event(connection_t *conn,int event,int flags)
+{
+	int ret =  action_add(conn->cycle->core,&conn->so,event,flags);
+	if(ret == 0)
+	{
+		conn->cycle->connection_count++;
+	}
+	return ret;
+}
+
 inline int add_connection(connection_t *conn)
 {
 	int ret =  action_add(conn->cycle->core,&conn->so,NGX_READ_EVENT,0);
@@ -99,7 +109,7 @@ inline int cicle_process(cycle_t * cycle)
 			break;
 		}else if(ret > 0)
 		{
-			// LOGD("action_process :%d\n",ret);
+			LOGD("action_process :%d\n",ret);
 		}
 		ngx_time_update();
 		ngx_event_expire_timers(&cycle->timeout);
@@ -130,7 +140,7 @@ inline int cicle_process_loop(cycle_t * cycle)
 			break;
 		}else if(ret > 0)
 		{
-			// LOGD("action_process :%d\n",ret);
+			LOGD("action_process :%d\n",ret);
 		}
 		ngx_event_expire_timers(&cycle->timeout);
 		safe_process_event(cycle);
