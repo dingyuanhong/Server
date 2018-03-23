@@ -29,7 +29,9 @@ typedef int32_t ngx_int_t;
 
 #define ngx_pid_t uint32_t
 typedef uint32_t u_int;
-// typedef uint32_t u_long;
+#ifndef __linux__
+typedef uint32_t u_long;
+#endif
 
 #ifdef _WIN32
 typedef int ssize_t;

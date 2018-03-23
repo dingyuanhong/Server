@@ -38,7 +38,7 @@ TARGET_INFO=client
 ALL_OBJS=$(OBJS) $(OBJS_TEST) $(OBJ_INFO)
 
 #动态库
-LIBS := pthread rt
+LIBS := pthread
 
 #头文件路径
 INCLUDE_PATH := $(SYSROOT)/usr/include
@@ -59,7 +59,7 @@ BITS =
 #	CFLAGS += -D_DEBUG -O0 -g -DDEBUG=1
 #endif
 
-CFLAGS = -Wall -DMAIN_TEST -DUSE_BOOL -std=gnu99 -D_POSIX_C_SOURCE=199309L -D_GNU_SOURCE
+CFLAGS = -Wall -DMAIN_TEST -DUSE_BOOL -std=gnu99 -D_POSIX_C_SOURCE=199506L -D_GNU_SOURCE
 LFLAGS =
 
 #头文件

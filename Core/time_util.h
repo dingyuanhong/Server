@@ -163,8 +163,10 @@ typedef struct tm             ngx_tm_t;
 #else
 #ifdef _WIN32
 #define ngx_timezone(isdst) (- (isdst ? _timezone + 3600 : _timezone) / 60)
-#else
+#elif __linux__
 #define ngx_timezone(isdst) (- (isdst ? __timezone + 3600 : __timezone) / 60)
+#else
+#define ngx_timezone(isdst) (- (isdst ? timezone + 3600 : timezone) / 60)
 #endif
 #endif
 

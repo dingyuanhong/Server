@@ -7,6 +7,10 @@
 
 #if (NGX_HAVE_KQUEUE)
 
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+
 #define NGX_READ_EVENT EVFILT_READ
 #define NGX_WRITE_EVENT EVFILT_WRITE
 

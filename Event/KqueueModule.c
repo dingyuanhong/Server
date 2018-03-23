@@ -11,11 +11,11 @@
 #include <sys/event.h>
 #include <sys/time.h>
 
-void kqueue_module_event_handler(event_t *ev)
+void kqueue_module_event_handler(event_t *ev);
 
 kqueue_module_t * kqueue_module_create(int concurrent)
 {
-	struct kqueue_module_t *module = (struct kqueue_module_t*)MALLOC(sizeof(struct kqueue_module_t));
+	kqueue_module_t *module =  (kqueue_module_t*)MALLOC(sizeof(kqueue_module_t));
 	module->handle = kqueue();
 
 	module->process = (event_t*)MALLOC(sizeof(event_t));
@@ -28,7 +28,7 @@ kqueue_module_t * kqueue_module_create(int concurrent)
 	return module;
 }
 
-int kqueue_module_t_done(kqueue_module_t * module)
+int kqueue_module_done(kqueue_module_t * module)
 {
 	if(module->events != NULL)
 	{
@@ -84,7 +84,7 @@ int kqueue_module_process(kqueue_module_t * module,int milliseconds)
 	struct timespec timeout_spec;
     timeout_spec.tv_sec = milliseconds / 1000;
     timeout_spec.tv_nsec = (milliseconds % 1000) * 1000 * 1000;
-	int n = kevent(module->handle, NULL, 0, module->events_ptr, module->events_count, &timeout_spec);
+	int n = kevent(module->handle, NULL, 0, events_ptr, events_count, &timeout_spec);
 	if(n == 0)
 	{
 		return 0;
@@ -95,7 +95,7 @@ int kqueue_module_process(kqueue_module_t * module,int milliseconds)
 		return -1;
 	}
 	module->events_count = min(n,events_count);
-	module->process->handle(module->process);
+	module->process->handler(module->process);
 	return module->events_count;
 }
 
@@ -107,28 +107,29 @@ void kqueue_module_event_handler(event_t *ev)
 	ASSERT(events_ptr != NULL);
 	for(int i = 0 ; i < module->events_count;i++)
 	{
-		struct kqueue_event *event_ptr = events_ptr[i];
+		struct kevent *event_ptr = (events_ptr + i);
 		ASSERT(event_ptr != NULL);
-		int events = event_ptr->events;
+
 		socket_t *so = (socket_t*)event_ptr->udata;
+		ASSERT(so != NULL);
 
 		int events = event_ptr->filter;
 		int flags = event_ptr->flags;
 
 		if(flags & EV_ERROR)
 		{
-			so->error->handle(so->error);
+			if(so->error != NULL) so->error->handler(so->error);
 		}
 		else if(events & EVFILT_READ)
 		{
-			so->write->handle(so->write);
+			if(so->write != NULL) so->write->handler(so->write);
 		}
 		else if(events & EVFILT_WRITE)
 		{
-			so->write->handle(so->write);
+			if(so->write != NULL) so->write->handler(so->write);
 		}
 		else{
-			so->error->handle(so->error);
+			if(so->error != NULL) so->error->handler(so->error);
 		}
 	}
 }

@@ -93,7 +93,7 @@ inline void safe_process_event(cycle_t *cycle)
 #define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
 
-inline int cicle_process(cycle_t * cycle)
+static inline int cicle_process(cycle_t * cycle)
 {
 	LOGD("cicle_process begin.\n");
 	while(1){
@@ -125,7 +125,7 @@ inline int cicle_process(cycle_t * cycle)
 	return 0;
 }
 
-inline int cicle_process_loop(cycle_t * cycle)
+static inline int cicle_process_loop(cycle_t * cycle)
 {
 	LOGD("cicle_process_loop begin.\n");
 	while(1){
