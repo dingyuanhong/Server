@@ -1,7 +1,42 @@
 #include "Core.h"
 
+const char * getLevelString(int level)
+{
+	switch(level)
+	{
+		case LOG_VERBOSE:// 0x1
+			return "VERBOSE";
+		case LOG_DEBUG:// 0x2	//调试
+			return "DEBUG";
+		case LOG_INFO:// 0x4	//信息
+			return "INFO";
+		case LOG_NOTICE:// 0x8 //通知
+			return "NOTICE";
+		case LOG_WARN:// 0x10	//警告
+			return "WARN";
+		case LOG_ALERT:// 0x20  //警报
+			return "ALERT";
+		case LOG_ERROR:// 0x40  //错误
+			return "ERROR";
+		case LOG_ASSERT:// 0x80 //断言
+			return "ASSERT";
+		case LOG_EMERG:// 0x100 //紧急
+			return "EMERG";
+		case LOG_CRIT:// 0x200	//非常严重
+			return "CRIT";
+		case LOG_ABORT:// 0x400	//停止
+			return "ABORT";
+	}
+
+	return "";
+}
+
 void log_default_printf(const char * file,int line,const char * func,int level,const char *format,...)
 {
+	if(func != NULL && line != -1)
+	{
+		printf("%s(%s %d):",getLevelString(level),func,line);
+	}
 	va_list list;
    	va_start(list,format);
 	vprintf(format,list);

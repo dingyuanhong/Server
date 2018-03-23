@@ -15,7 +15,7 @@ LOG_PRINTF set_log_printf(LOG_PRINTF log);
 		#ifdef DEBUG
 			#define LOG(LEVEL,FMT,...) G_LOG_PRINTF(__FILE__,__LINE__,__FUNCTION__,LEVEL,FMT,##__VA_ARGS__);
 		#else
-			#define LOG(LEVEL,FMT,...) G_LOG_PRINTF(NULL,0,NULL,LEVEL,FMT,##__VA_ARGS__);
+			#define LOG(LEVEL,FMT,...) G_LOG_PRINTF(NULL,-1,NULL,LEVEL,FMT,##__VA_ARGS__);
 		#endif
 	#endif
 #endif

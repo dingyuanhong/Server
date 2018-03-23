@@ -90,7 +90,7 @@ int accept_event_handler(event_t *ev)
 int accept_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
-	SOCKET fd = socket_bind("tcp","127.0.0.1:888");
+	SOCKET fd = socket_bind("tcp","0.0.0.0:888");
 	if(fd == -1){
 		return -1;
 	}
@@ -108,7 +108,7 @@ int accept_handler(event_t *ev)
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	ret = add_connection(conn);
-	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return 0;
 }
 
@@ -120,7 +120,7 @@ int connection_add_event(event_t *ev)
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection(conn);
-	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return ret;
 }
 
@@ -135,7 +135,7 @@ void connection_add_event_sub(cycle_t * cycle,event_t *ev)
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection(conn);
-	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
 void cycle_thread_cb(void* arg)
