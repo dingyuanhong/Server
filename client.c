@@ -81,7 +81,7 @@ int error_event_handler(event_t *ev)
 	if(ret == 0)
 	{
 		connection_close(c);
-		// LOGD("error close.\n");
+		LOGD("error close.\n");
 	}else
 	{
 		LOGE("error close failed %d errno:%d\n",ret,errno);
@@ -102,7 +102,8 @@ int cycle_handler(event_t *ev)
 	conn->so.read = createEvent(error_event_handler,conn);
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
-	add_connection(conn);
+	int ret = add_connection(conn);
+	ASSERT(ret == 0);
 
 	add_event(cycle,ev);
 	return 0;

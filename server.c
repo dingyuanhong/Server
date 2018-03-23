@@ -24,9 +24,9 @@ int connection_close_handler(event_t *ev)
 	connection_t *c = (connection_t*)ev->data;
 	int ret = 0;
 	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
-	ABORTIF(ret == 0,"socket_linger %d\n",ret);
+	ABORTIF(ret != 0,"socket_linger %d\n",ret);
 	// ret = shutdown(c->so.handle,SHUT_WR);
-	// ABORTIF(ret == 0,"shutodwn %d\n",ret);
+	// ABORTIF(ret != 0,"shutodwn %d\n",ret);
 	ret = close(c->so.handle);
 	if(ret == 0)
 	{
