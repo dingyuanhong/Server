@@ -5,7 +5,6 @@
 #else
 #include <unistd.h>
 #include <time.h>
-#define __USE_GNU
 #include <sched.h>
 #include <pthread.h>
 #ifdef __linux__
