@@ -28,9 +28,7 @@ LOG_PRINTF set_log_printf(LOG_PRINTF log);
 #define LOG_ALERT 0x20  //警报
 #define LOG_ERROR 0x40  //错误
 #define LOG_ASSERT 0x80 //断言
-#define LOG_EMERG 0x100 //紧急
-#define LOG_CRIT 0x200	//非常严重
-#define LOG_ABORT 0x400	//停止
+#define LOG_ABORT 0x100	//终止
 #
 #define LOGE(FMT,...) LOG(LOG_ERROR,FMT,##__VA_ARGS__)
 #define LOGD(FMT,...) LOG(LOG_DEBUG,FMT,##__VA_ARGS__)

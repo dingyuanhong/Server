@@ -37,8 +37,22 @@ inline int del_connection(connection_t *conn)
 	return ret;
 }
 
-#define add_event(cycle,ev) ngx_post_event(ev,&cycle->posted)
-#define del_event(cycle,ev) ngx_delete_posted_event(ev)
+
+
+#define add_event(cycle,ev) ASSERT(ev != NULL);ngx_post_event(ev,&cycle->posted)
+#define del_event(cycle,ev) if(ev != NULL){ngx_delete_posted_event(ev);}
+#define del_event_conn(conn) del_event(conn->cycle,conn->so.read); \
+							del_event(conn->cycle,conn->so.write); \
+							del_event(conn->cycle,conn->so.error);
+
+#define add_timer(cycle,ev,time) ASSERT(ev!=NULL);ngx_event_add_timer(&cycle->timeout,ev,time)
+#define del_timer(cycle,ev) if(ev != NULL){ngx_event_del_timer(&cycle->timeout,ev);}
+#define del_timer_conn(conn) del_timer(conn->cycle,conn->so.read); \
+							del_timer(conn->cycle,conn->so.write); \
+							del_timer(conn->cycle,conn->so.error);
+
+#define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
+#define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
 
 typedef void (*safe_event_handle_pt)(cycle_t * cycle,event_t *ev);
 
@@ -86,19 +100,16 @@ inline void safe_process_event(cycle_t *cycle)
 	}
 }
 
-
-#define add_timer(cycle,ev,timer) ngx_event_add_timer(&cycle->timeout,ev,timer)
-#define del_timer(cycle,ev) ngx_event_del_timer(&cycle->timeout,ev)
-
-#define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
-#define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
-
 static inline int cicle_process(cycle_t * cycle)
 {
 	LOGD("cicle_process begin.\n");
 	while(1){
 		ngx_time_update();
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
+		if(!event_is_empty(cycle))
+		{
+			timeout = 0;
+		}else
 		if(timeout == NGX_TIMER_INFINITE)
 		{
 			timeout = 10;
@@ -130,6 +141,10 @@ static inline int cicle_process_loop(cycle_t * cycle)
 	LOGD("cicle_process_loop begin.\n");
 	while(1){
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
+		if(!event_is_empty(cycle))
+		{
+			timeout = 0;
+		}else
 		if(timeout == NGX_TIMER_INFINITE)
 		{
 			timeout = 10;

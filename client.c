@@ -17,7 +17,6 @@ int connection_close_handler(event_t *ev)
 	{
 		LOGD("connection closed:%d\n",c->so.handle);
 		deleteConn(&c);
-		deleteEvent(&ev);
 	}else{
 		LOGD("connection closing:%d\n",c->so.handle);
 		add_event(c->cycle,ev);
@@ -26,8 +25,11 @@ int connection_close_handler(event_t *ev)
 }
 
 void connection_close(connection_t *c){
-	event_t * timer = createEvent(connection_close_handler,c);
-	add_event(c->cycle,timer);
+	ASSERT(c->so.error != NULL);
+	del_event_conn(c);
+	del_timer_conn(c);
+	c->so.error->handler = connection_close_handler;
+	add_event(c->cycle,c->so.error);
 }
 
 int read_event_handler(event_t *ev)
@@ -104,7 +106,7 @@ int cycle_handler(event_t *ev)
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection_event(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
-	add_timer(cycle,conn->so.error,500);
+	add_timer(cycle,conn->so.read,500);
 
 	add_event(cycle,ev);
 	return 0;

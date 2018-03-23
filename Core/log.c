@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "log.h"
 
 const char * getLevelString(int level)
 {
@@ -20,11 +21,7 @@ const char * getLevelString(int level)
 			return "ERROR";
 		case LOG_ASSERT:// 0x80 //断言
 			return "ASSERT";
-		case LOG_EMERG:// 0x100 //紧急
-			return "EMERG";
-		case LOG_CRIT:// 0x200	//非常严重
-			return "CRIT";
-		case LOG_ABORT:// 0x400	//停止
+		case LOG_ABORT:// 0x400	//终止
 			return "ABORT";
 	}
 

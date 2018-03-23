@@ -8,6 +8,11 @@
 //time events
 void ngx_event_del_timer(ngx_rbtree_t * timeout,event_t *ev)
 {
+	if(ev->timer_set == 0)
+	{
+		return;
+	}
+	
     ngx_rbtree_delete(timeout, &ev->timer);
 
 #if (NGX_DEBUG)
