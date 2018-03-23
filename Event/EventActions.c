@@ -39,9 +39,9 @@ static const EventActionmodule select_action = {
 #if  (NGX_HAVE_EPOLL)
 #define DEFAULT_ACTION_module epoll_action
 #elif (NGX_HAVE_KQUEUE)
-#define DEFAULT_ACTION_module select_action;
+#define DEFAULT_ACTION_module kqueue_action
 #elif (NGX_HAVE_SELECT)
-#define DEFAULT_ACTION_module kqueue_action;
+#define DEFAULT_ACTION_module select_action
 #endif
 
 core_t * action_create(int concurrent)

@@ -22,6 +22,7 @@ int connection_close_handler(event_t *ev)
 		LOGD("connection closing:%d\n",c->so.handle);
 		add_event(c->cycle,ev);
 	}
+	return 0;
 }
 
 void connection_close(connection_t *c){

@@ -34,15 +34,9 @@
 #endif
 
 #include <stdint.h>
-
-#define ngx_inline inline
-typedef uint8_t u_char;
-typedef uint32_t ngx_uint_t;
-typedef int32_t ngx_int_t;
+#include "type.h"
 
 extern ngx_int_t   ngx_ncpu;
-
-
 
 void os_init();
 

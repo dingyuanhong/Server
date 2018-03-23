@@ -69,7 +69,7 @@ int socket_init()
 	}
 	int socket_keepalive(SOCKET socket)
 	{
-		return socket_keepalive(socket,5,1,1);
+		return socket_keepalive_(socket, 5, 1, 1);
 	}
 #else
 	int  socket_nonblocking(SOCKET sock)
@@ -230,16 +230,18 @@ int socket_recvtimeout(SOCKET socket, int timeout)
 		return sizeof(struct sockaddr_in);
 	}else if(Type == TYPE_UDP){
 		return sizeof(struct sockaddr_in);
-	}else if(Type == TYPE_UNIX){
-		return sizeof(struct sockaddr_un);
-	}else if(Type == TYPE_TCP6){
-		return sizeof(struct sockaddr_in6);
 	}
 #if (NGX_HAVE_SOCKET_UNIX)
+	else if(Type == TYPE_UNIX){
+		return sizeof(struct sockaddr_un);
+	}
+#endif
+	else if(Type == TYPE_TCP6){
+		return sizeof(struct sockaddr_in6);
+	}
 	else if(Type == TYPE_UDP6){
 		return sizeof(struct sockaddr_in6);
 	}
-#endif
 	else {
 		return 0;
 	}

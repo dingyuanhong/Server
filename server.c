@@ -112,7 +112,7 @@ int accept_handler(event_t *ev)
 	return 0;
 }
 
-void connection_add_event(event_t *ev)
+int connection_add_event(event_t *ev)
 {
 	connection_t * conn = (connection_t*)ev->data;
 	deleteEvent(&ev);
@@ -121,12 +121,13 @@ void connection_add_event(event_t *ev)
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection(conn);
 	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	return ret;
 }
 
 
 void connection_add_event_sub(cycle_t * cycle,event_t *ev)
 {
-	SOCKET fd = (SOCKET*)ev->data;
+	SOCKET fd = (SOCKET)ev->data;
 	deleteEvent(&ev);
 	// LOGD("add_connection_event.%d\n",fd);
 	connection_t * conn = createConn(cycle,fd);
@@ -164,7 +165,7 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 			ABORTI(ret != 0);
 		}
 		ABORTI(*subcycle_ptr == NULL);
-		safe_add_event(*subcycle_ptr,createEvent(NULL,fd),connection_add_event_sub);
+		safe_add_event(*subcycle_ptr,createEvent(NULL,(void*)fd),connection_add_event_sub);
 
 		cycle_pool_index++;
 	}

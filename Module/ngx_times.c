@@ -8,6 +8,30 @@
 #include "ngx_times.h"
 
 #define ngx_gettimeofday(A) gettimeofday(A,NULL)
+
+#ifdef _WIN32
+int
+gettimeofday(struct timeval *tp, void *tzp)
+{
+	time_t clock;
+	struct tm tm;
+	SYSTEMTIME wtm;
+
+	GetLocalTime(&wtm);
+	tm.tm_year = wtm.wYear - 1900;
+	tm.tm_mon = wtm.wMonth - 1;
+	tm.tm_mday = wtm.wDay;
+	tm.tm_hour = wtm.wHour;
+	tm.tm_min = wtm.wMinute;
+	tm.tm_sec = wtm.wSecond;
+	tm.tm_isdst = -1;
+	clock = mktime(&tm);
+	tp->tv_sec = clock;
+	tp->tv_usec = wtm.wMilliseconds * 1000;
+
+	return (0);
+}
+#endif
 /*
  * The time may be updated by signal handler or by several threads.
  * The time update operations are rare and require to hold the ngx_time_lock.
@@ -55,11 +79,12 @@ ngx_time_init(void)
 void
 ngx_time_update(void)
 {
-    ngx_tm_t         tm, gmt;
+    ngx_tm_t         tm_, gmt_;
     time_t           sec;
     ngx_uint_t       msec;
     ngx_time_t      *tp;
     struct timeval   tv;
+	ngx_int_t cached_gmtoff;
 
     if (!ngx_trylock(&ngx_time_lock)) {
         return;
@@ -91,7 +116,7 @@ ngx_time_update(void)
     tp->sec = sec;
     tp->msec = msec;
 
-    ngx_gmtime(sec, &gmt);
+	ngx_gmtime(sec, &gmt_);
 
 
 #if (NGX_HAVE_GETTIMEZONE)
@@ -107,8 +132,8 @@ ngx_time_update(void)
 
 #else
 
-    ngx_localtime(sec, &tm);
-    cached_gmtoff = ngx_timezone(tm.ngx_tm_isdst);
+	ngx_localtime(sec, &tm_);
+	cached_gmtoff = ngx_timezone(tm_.ngx_tm_isdst);
     tp->gmtoff = cached_gmtoff;
 
 #endif

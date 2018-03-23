@@ -1,23 +1,24 @@
-#ifndef THREAD_H
-#define THREAD_H
+#ifndef THREAD_WIN_H
+#define THREAD_WIN_H
 
 #ifdef _WIN32
 
-	  /* Windows - set up dll import/export decorators. */
-	# if defined(BUILDING_UV_SHARED)
-	    /* Building shared library. */
-	#   define UV_EXTERN __declspec(dllexport)
-	# elif defined(USING_UV_SHARED)
-	    /* Using shared library. */
-	#   define UV_EXTERN __declspec(dllimport)
-	# else
-	    /* Building static library. */
-	#   define UV_EXTERN /* nothing */
-	# endif
-
 #include <stdint.h>
 #include <stdlib.h>
+#include <winsock2.h>
 #include <windows.h>
+
+/* Windows - set up dll import/export decorators. */
+# if defined(BUILDING_UV_SHARED)
+/* Building shared library. */
+#   define UV_EXTERN __declspec(dllexport)
+# elif defined(USING_UV_SHARED)
+/* Using shared library. */
+#   define UV_EXTERN __declspec(dllimport)
+# else
+/* Building static library. */
+#   define UV_EXTERN /* nothing */
+# endif
 
 typedef HANDLE uv_thread_t;
 
@@ -81,7 +82,7 @@ typedef struct uv_once_s {
 #include <errno.h>
 #define UV_EINVAL EINVAL
 #define UV_EBUSY EBUSY
-#define UV_ENOMEM ENOMEN
+#define UV_ENOMEM ENOMEM
 #define UV_EACCES EACCES
 #define UV_EAGAIN EAGAIN
 #define UV_EIO EIO

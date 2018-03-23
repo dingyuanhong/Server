@@ -1,6 +1,6 @@
-#include "log.h"
+#include "Core.h"
 
-static inline void log_default_printf(const char * file,int line,const char * func,int level,const char *format,...)
+void log_default_printf(const char * file,int line,const char * func,int level,const char *format,...)
 {
 	va_list list;
    	va_start(list,format);

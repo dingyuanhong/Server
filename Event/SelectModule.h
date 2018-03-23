@@ -26,7 +26,10 @@
 #endif
 
 #ifdef _WIN32
-#define FD_SETSIZE 1024
+#ifdef FD_SETSIZE
+#undef FD_SETSIZE
+#define FD_SETSIZE  1024
+#endif
 #include <Winsock2.h>
 #include <windows.h>
 #else

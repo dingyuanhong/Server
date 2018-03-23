@@ -10,6 +10,8 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <mstcpip.h>
+#include <ws2tcpip.h>
+#include <errno.h>
 
 #define close closesocket
 #else

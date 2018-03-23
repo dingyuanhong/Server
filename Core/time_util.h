@@ -2,7 +2,7 @@
 #define TIMEUTIL_H
 
 #include <stdint.h>
-#include "Core.h"
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,7 +14,7 @@ inline uint64_t time_nanosecond()
 	LARGE_INTEGER timestamp;
 	QueryPerformanceFrequency(&tick);
 	QueryPerformanceCounter(&timestamp);
-	uint64_t us=(timestamp.QuadPart % tick.QuadPart)*1E6/tick.QuadPart;
+	uint64_t us=(timestamp.QuadPart % tick.QuadPart)*1000000/tick.QuadPart;
 	return us;
 }
 
@@ -25,7 +25,7 @@ inline uint64_t time_microsecond_()
 	LARGE_INTEGER timestamp;
 	QueryPerformanceFrequency(&tick);
 	QueryPerformanceCounter(&timestamp);
-	uint64_t us=(timestamp.QuadPart % tick.QuadPart)*1E3/tick.QuadPart;
+	uint64_t us=(timestamp.QuadPart % tick.QuadPart)*1000/tick.QuadPart;
 	return us;
 }
 
@@ -45,19 +45,25 @@ inline uint64_t time_microsecond()
     return tt;
 }
 //毫秒
-inline uint64_t  time_millisecond(){
-	return time_microsecond()/1E3;
+inline uint64_t time_millisecond()
+{
+	return time_microsecond()/1000;
 }
-//秒
-inline long  time_second(){
-	return time_microsecond()/1E6;
+inline long time_second()
+{
+	uint64_t time = time_microsecond();
+	return (long)(time / 1000000);
 }
-
+inline double time_secondd()
+{
+	uint64_t time = time_microsecond();
+	return (time / 1E6);
+}
 
 #define sleep(A) Sleep(A/1000)
 
 //微秒
-int usleep(int microsecond){
+inline int usleep(int microsecond){
 	LARGE_INTEGER Freq={0};
     if (!QueryPerformanceFrequency(&Freq))
 	{
@@ -70,12 +76,12 @@ int usleep(int microsecond){
 	for(;;)
 	{
 		QueryPerformanceCounter(&Curr);
-		time= ((Curr.QuadPart - Start.QuadPart)*1000000)/Freq.QuadPart;
-		if (time >= delayTime){
+		time= (int)(((Curr.QuadPart - Start.QuadPart)*1000000)/Freq.QuadPart);
+		if (time >= microsecond){
 			break;
 		}
-		if(time - delayTime / 1000 > 1){
-			Sleep(time - delayTime / 1000);
+		if (time - microsecond / 1000 > 1){
+			Sleep(time - microsecond / 1000);
 		}
 	}
 	return time;
@@ -92,35 +98,35 @@ int usleep(int microsecond){
 //纳秒
 static inline uint64_t time_nanosecond(){
 	struct timespec ts;
-	ABORTM(clock_gettime(CLOCK_REALTIME, &ts) == -1);
-	return ts.tv_sec*1E9 + ts.tv_nsec;
+	ABORTI(clock_gettime(CLOCK_REALTIME, &ts) == -1);
+	return ts.tv_sec*1000000000 + ts.tv_nsec;
 }
 
 //微秒
 inline uint64_t time_microsecond(){
 	struct timeval tv;
-    ABORTM(gettimeofday(&tv,NULL)==-1);
-	return tv.tv_sec*1E6 + tv.tv_usec;
+	ABORTI(gettimeofday(&tv,NULL)==-1);
+	return tv.tv_sec*1000000 + tv.tv_usec;
 }
 
 //毫秒
 inline uint64_t  time_millisecond(){
 	struct timeval tv;
-	ABORTM(gettimeofday(&tv,NULL) == -1);
-	return tv.tv_sec*1E3 + tv.tv_usec/1000;
+	ABORTI(gettimeofday(&tv,NULL) == -1);
+	return tv.tv_sec*1000 + tv.tv_usec/1000;
 }
 
 //秒
 inline long  time_second(){
 	struct timeval tv;
-    ABORTM(gettimeofday(&tv,NULL) == -1);
+	ABORTI(gettimeofday(&tv,NULL) == -1);
 	return tv.tv_sec;
 }
 
 //秒
 inline double  time_secondd(){
 	struct timeval tv;
-    ABORTM(gettimeofday(&tv,NULL) == -1);
+	ABORTI(gettimeofday(&tv,NULL) == -1);
 	double usec = (double)tv.tv_usec;
 	return tv.tv_sec + usec/1000000;
 }
@@ -155,7 +161,11 @@ typedef struct tm             ngx_tm_t;
 #if (NGX_SOLARIS)
 #define ngx_timezone(isdst) (- (isdst ? altzone : timezone) / 60)
 #else
+#ifdef _WIN32
+#define ngx_timezone(isdst) (- (isdst ? _timezone + 3600 : _timezone) / 60)
+#else
 #define ngx_timezone(isdst) (- (isdst ? __timezone + 3600 : __timezone) / 60)
+#endif
 #endif
 
 #if (NGX_HAVE_SCHED_YIELD)

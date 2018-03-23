@@ -4,9 +4,8 @@
  * Copyright (C) Nginx, Inc.
  */
 
-
+#include "Core.h"
 #include "ngx_string.h"
-
 
 static u_char *ngx_sprintf_num(u_char *buf, u_char *last, uint64_t ui64,
     u_char zero, ngx_uint_t hexadecimal, ngx_uint_t width);

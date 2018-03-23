@@ -17,7 +17,6 @@
 #define NGX_FLAGS_EOF EV_EOF
 #define NGX_FLAGS_CLEAR EV_CLEAR
 
-#endif
 
 #include "Socket.h"
 #include "Event.h"
@@ -38,5 +37,7 @@ int kqueue_module_add(kqueue_module_t * module,socket_t * so,int event, int flag
 int kqueue_module_del(kqueue_module_t * module,socket_t * so);
 int kqueue_module_set(kqueue_module_t * module,socket_t * so,int event, int flags);
 int kqueue_module_process(kqueue_module_t * module,int milliseconds);
+
+#endif
 
 #endif

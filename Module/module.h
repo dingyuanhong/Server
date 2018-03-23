@@ -39,11 +39,12 @@ typedef struct safe_event_s{
 	safe_event_handle_pt handler;
 }safe_event_t;
 
-static inline void safe_event_handler(event_t *ev)
+static inline int safe_event_handler(event_t *ev)
 {
 	safe_event_t * sev = (safe_event_t*)ev->data;
 	sev->handler(sev->cycle,sev->event);
 	FREE(sev);
+	return 0;
 }
 
 inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)

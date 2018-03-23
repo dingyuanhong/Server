@@ -27,15 +27,15 @@
 
 #include "thread.h"
 #include "core.h"
-#define uv_winapi_init
+#define uv_winapi_init()
 #define uv_fatal_error(A,B) LOGE("%s errno:%d\n",(B),(A))
 #define uv_translate_sys_error(A) (A)
+#define uv_malloc MALLOC
 #define uv_free FREE
-
 
 #include <process.h>
 
-#define HAVE_CONDVAR_API() (pInitializeConditionVariable != NULL)
+#define HAVE_CONDVAR_API() (InitializeConditionVariable != NULL)
 
 static int uv_cond_fallback_init(uv_cond_t* cond);
 static void uv_cond_fallback_destroy(uv_cond_t* cond);
@@ -121,7 +121,7 @@ static uv_once_t uv__current_thread_init_guard = UV_ONCE_INIT;
 
 static void uv__init_current_thread_key(void) {
 	if (uv_key_create(&uv__current_thread_key)){
-		ABORTI(__func__);
+		ABORTI(__FUNCTION__);
 	}
 }
 
@@ -137,7 +137,7 @@ static UINT __stdcall uv__thread_start(void* arg) {
 	struct thread_ctx *ctx_p;
 	struct thread_ctx ctx;
 
-	ctx_p = (thread_ctx*)arg;
+	ctx_p = (struct thread_ctx*)arg;
 	ctx = *ctx_p;
 	uv_free(ctx_p);
 
@@ -348,6 +348,7 @@ int uv_rwlock_trywrlock(uv_rwlock_t* rwlock) {
     return UV_EBUSY;
   else
     uv_fatal_error(GetLastError(), "WaitForSingleObject");
+  return -1;
 }
 
 
@@ -368,21 +369,21 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
 
 void uv_sem_destroy(uv_sem_t* sem) {
   if (!CloseHandle(*sem)){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
 }
 
 
 void uv_sem_post(uv_sem_t* sem) {
   if (!ReleaseSemaphore(*sem, 1, NULL)){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
 }
 
 
 void uv_sem_wait(uv_sem_t* sem) {
   if (WaitForSingleObject(*sem, INFINITE) != WAIT_OBJECT_0){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
 }
 
@@ -396,7 +397,7 @@ int uv_sem_trywait(uv_sem_t* sem) {
   if (r == WAIT_TIMEOUT)
     return UV_EAGAIN;
 
-  ABORTI(__func__);
+  ABORTI(__FUNCTION__);
   return -1; /* Satisfy the compiler. */
 }
 
@@ -447,7 +448,7 @@ error2:
 
 
 static int uv_cond_condvar_init(uv_cond_t* cond) {
-  pInitializeConditionVariable(&cond->cond_var);
+  InitializeConditionVariable(&cond->cond_var);
   return 0;
 }
 
@@ -464,10 +465,10 @@ int uv_cond_init(uv_cond_t* cond) {
 
 static void uv_cond_fallback_destroy(uv_cond_t* cond) {
   if (!CloseHandle(cond->fallback.broadcast_event)){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
   if (!CloseHandle(cond->fallback.signal_event)){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
   DeleteCriticalSection(&cond->fallback.waiters_count_lock);
 }
@@ -500,7 +501,7 @@ static void uv_cond_fallback_signal(uv_cond_t* cond) {
 
 
 static void uv_cond_condvar_signal(uv_cond_t* cond) {
-  pWakeConditionVariable(&cond->cond_var);
+  WakeConditionVariable(&cond->cond_var);
 }
 
 
@@ -526,7 +527,7 @@ static void uv_cond_fallback_broadcast(uv_cond_t* cond) {
 
 
 static void uv_cond_condvar_broadcast(uv_cond_t* cond) {
-  pWakeAllConditionVariable(&cond->cond_var);
+  WakeAllConditionVariable(&cond->cond_var);
 }
 
 
@@ -583,21 +584,21 @@ static int uv_cond_wait_helper(uv_cond_t* cond, uv_mutex_t* mutex,
   if (result == WAIT_TIMEOUT)
     return UV_ETIMEDOUT;
 
-  ABORTI(__func__);
+  ABORTI(__FUNCTION__);
   return -1; /* Satisfy the compiler. */
 }
 
 
 static void uv_cond_fallback_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
   if (uv_cond_wait_helper(cond, mutex, INFINITE)){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
 }
 
 
 static void uv_cond_condvar_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
-  if (!pSleepConditionVariableCS(&cond->cond_var, mutex, INFINITE)){
-    ABORTI(__func__);
+  if (!SleepConditionVariableCS(&cond->cond_var, mutex, INFINITE)){
+	  ABORTI(__FUNCTION__);
   }
 }
 
@@ -618,10 +619,10 @@ static int uv_cond_fallback_timedwait(uv_cond_t* cond,
 
 static int uv_cond_condvar_timedwait(uv_cond_t* cond,
     uv_mutex_t* mutex, uint64_t timeout) {
-  if (pSleepConditionVariableCS(&cond->cond_var, mutex, (DWORD)(timeout / 1e6)))
+  if (SleepConditionVariableCS(&cond->cond_var, mutex, (DWORD)(timeout / 1e6)))
     return 0;
   if (GetLastError() != ERROR_TIMEOUT){
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   }
   return UV_ETIMEDOUT;
 }
@@ -709,7 +710,7 @@ int uv_key_create(uv_key_t* key) {
 
 void uv_key_delete(uv_key_t* key) {
   if (TlsFree(key->tls_index) == FALSE)
-    ABORTI(__func__);
+	  ABORTI(__FUNCTION__);
   key->tls_index = TLS_OUT_OF_INDEXES;
 }
 
@@ -720,7 +721,7 @@ void* uv_key_get(uv_key_t* key) {
   value = TlsGetValue(key->tls_index);
   if (value == NULL)
     if (GetLastError() != ERROR_SUCCESS){
-      ABORTI(__func__);
+		ABORTI(__FUNCTION__);
     }
 
   return value;
@@ -729,7 +730,7 @@ void* uv_key_get(uv_key_t* key) {
 
 void uv_key_set(uv_key_t* key, void* value) {
   if (TlsSetValue(key->tls_index, value) == FALSE){
-    ABORTI(__func__);
+    ABORTI(__FUNCTION__);
   }
 }
 
