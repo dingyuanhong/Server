@@ -94,7 +94,7 @@ int cycle_handler(event_t *ev)
 	cycle_t *cycle = (cycle_t*)ev->data;
 	SOCKET fd = socket_connect("tcp","10.0.2.6:888",1);
 	if(fd == -1){
-		add_timer(cycle,ev,1);
+		add_event(cycle,ev);
 		return -1;
 	}
 	LOGD("socket connect %d\n",fd);
@@ -104,8 +104,9 @@ int cycle_handler(event_t *ev)
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection_event(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
+	add_timer(cycle,conn->so.error,500);
 
-	// add_timer(cycle,ev,1);
+	add_event(cycle,ev);
 	return 0;
 }
 

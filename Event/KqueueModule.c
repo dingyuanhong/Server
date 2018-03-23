@@ -47,7 +47,7 @@ int kqueue_module_done(kqueue_module_t * module)
 
 int kqueue_module_add(kqueue_module_t * module,socket_t * so,int event, int flags)
 {
-	return kqueue_module_set(module,so,EVFILT_READ | event,EV_ADD|flags);
+	return kqueue_module_set(module,so,EVFILT_READ | event,EV_ADD|EV_ENABLE|flags);
 }
 
 int kqueue_module_del(kqueue_module_t * module,socket_t * so)
@@ -122,7 +122,7 @@ void kqueue_module_event_handler(event_t *ev)
 		}
 		else if(events & EVFILT_READ)
 		{
-			if(so->write != NULL) so->write->handler(so->write);
+			if(so->read != NULL) so->read->handler(so->read);
 		}
 		else if(events & EVFILT_WRITE)
 		{
