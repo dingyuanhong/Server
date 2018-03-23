@@ -92,7 +92,7 @@ int error_event_handler(event_t *ev)
 int cycle_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
-	SOCKET fd = socket_connect("tcp","127.0.0.1:888",0);
+	SOCKET fd = socket_connect("tcp","10.0.2.6:888",1);
 	if(fd == -1){
 		add_event(cycle,ev);
 		return -1;

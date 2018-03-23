@@ -23,7 +23,8 @@
 
 #define ngx_delete_posted_event(ev)                                           \
     (ev)->posted = 0;                                                         \
-    ngx_queue_remove(&(ev)->queue);
+    ngx_queue_remove(&(ev)->queue);											  \
+	ngx_queue_init(&(ev)->queue);
 
 
 
