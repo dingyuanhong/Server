@@ -17,16 +17,16 @@ static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 	return NULL;
 }
 
-int connection_post(cycle_t *cycle,SOCKET fd);
+int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 
 int connection_close_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	int ret = 0;
 	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
-	LOGA(ret == 0,"socket_linger %d\n",ret);
+	ABORTIF(ret == 0,"socket_linger %d\n",ret);
 	// ret = shutdown(c->so.handle,SHUT_WR);
-	// LOGA(ret == 0,"shutodwn %d\n",ret);
+	// ABORTIF(ret == 0,"shutodwn %d\n",ret);
 	ret = close(c->so.handle);
 	if(ret == 0)
 	{
@@ -37,6 +37,7 @@ int connection_close_handler(event_t *ev)
 		LOGD("connection closing:%d\n",c->so.handle);
 		add_event(c->cycle,ev);
 	}
+	return 0;
 }
 
 void connection_close(connection_t *c)
@@ -81,7 +82,7 @@ int accept_event_handler(event_t *ev)
 
 		// socket_nonblocking(afd);
 		// connection_close(createConn(c->cycle,afd));
-		connection_post(c->cycle,afd);
+		cycle_thread_post(c->cycle,afd);
 	}
 	return count;
 }
@@ -107,8 +108,33 @@ int accept_handler(event_t *ev)
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	ret = add_connection(conn);
-	LOGA(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return 0;
+}
+
+void connection_add_event(event_t *ev)
+{
+	connection_t * conn = (connection_t*)ev->data;
+	deleteEvent(&ev);
+	conn->so.read = createEvent(error_event_handler,conn);
+	conn->so.write = NULL;
+	conn->so.error = createEvent(error_event_handler,conn);
+	int ret = add_connection(conn);
+	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+}
+
+
+void connection_add_event_sub(cycle_t * cycle,event_t *ev)
+{
+	SOCKET fd = (SOCKET*)ev->data;
+	deleteEvent(&ev);
+	// LOGD("add_connection_event.%d\n",fd);
+	connection_t * conn = createConn(cycle,fd);
+	conn->so.read = createEvent(error_event_handler,conn);
+	conn->so.write = NULL;
+	conn->so.error = createEvent(error_event_handler,conn);
+	int ret = add_connection(conn);
+	ABORTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
 void cycle_thread_cb(void* arg)
@@ -117,44 +143,32 @@ void cycle_thread_cb(void* arg)
 	cicle_process_loop(cycle);
 }
 
-void add_connection_event(cycle_t * cycle,event_t *ev)
-{
-	// LOGD("add_connection_event.\n");
-	SOCKET fd = (SOCKET*)ev->data;
-	deleteEvent(&ev);
-	connection_t * conn = createConn(cycle,fd);
-	conn->so.read = createEvent(error_event_handler,conn);
-	conn->so.write = NULL;
-	conn->so.error = createEvent(error_event_handler,conn);
-	int ret = add_connection(conn);
-	LOGA(ret == 0,"action_add %d errno:%d\n",ret,errno);
-}
-
-int connection_post(cycle_t *cycle,SOCKET fd)
+int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 {
 	if(cycle_pool == NULL || thread_pool == NULL)
 	{
-		add_event(cycle,createEvent(add_connection_event,fd));
+		add_event(cycle,createEvent(connection_add_event,createConn(cycle,fd)));
 	}else{
 		cycle_t ** subcycle_ptr = (cycle_t**)ngx_array_get(cycle_pool,cycle_pool_index%max_thread_count);
-		ABORTM(subcycle_ptr == NULL);
+		ABORTI(subcycle_ptr == NULL);
 		if(*subcycle_ptr == NULL)
 		{
 			cycle_t *subcycle = createCycle(MAX_FD_COUNT);
-			ABORTM(subcycle == NULL);
-			ABORTM(subcycle->core == NULL);
+			ABORTI(subcycle == NULL);
+			ABORTI(subcycle->core == NULL);
 			*subcycle_ptr = subcycle;
 
 			//启动线程
 			uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(thread_pool,cycle_pool_index%max_thread_count);
 			int ret = uv_thread_create(thread_id,cycle_thread_cb,subcycle);
-			ABORTM(ret != 0);
+			ABORTI(ret != 0);
 		}
-		ABORTM(*subcycle_ptr == NULL);
-		safe_add_event(*subcycle_ptr,createEvent(add_connection_event,fd),add_connection_event);
+		ABORTI(*subcycle_ptr == NULL);
+		safe_add_event(*subcycle_ptr,createEvent(NULL,fd),connection_add_event_sub);
 
 		cycle_pool_index++;
 	}
+	return 0;
 }
 
 int main(int argc,char* argv[])
@@ -164,8 +178,8 @@ int main(int argc,char* argv[])
 	ngx_time_init();
 
 	cycle_t *cycle = createCycle(MAX_FD_COUNT);
-	ABORTM(cycle == NULL);
-	ABORTM(cycle->core == NULL);
+	ABORTI(cycle == NULL);
+	ABORTI(cycle->core == NULL);
 
 	max_thread_count = (ngx_ncpu - 1)*2;
 	if(max_thread_count > 0)

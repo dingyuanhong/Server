@@ -39,14 +39,14 @@ typedef struct safe_event_s{
 	safe_event_handle_pt handler;
 }safe_event_t;
 
-static inline int safe_event_handler(event_t *ev)
+static inline void safe_event_handler(event_t *ev)
 {
 	safe_event_t * sev = (safe_event_t*)ev->data;
 	sev->handler(sev->cycle,sev->event);
 	FREE(sev);
 }
 
-static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)
+inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)
 {
 	safe_event_t * sev = (safe_event_t*)MALLOC(sizeof(safe_event_t));
 	sev->cycle = cycle;
@@ -59,7 +59,7 @@ static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_
 	ngx_unlock(&cycle->accept_posted_lock);
 }
 
-static inline void safe_process_event(cycle_t *cycle)
+inline void safe_process_event(cycle_t *cycle)
 {
 	if(cycle->accept_posted_index > 0)
 	{
@@ -84,6 +84,7 @@ static inline void safe_process_event(cycle_t *cycle)
 
 inline int cicle_process(cycle_t * cycle)
 {
+	LOGD("cicle_process begin.\n");
 	while(1){
 		ngx_time_update();
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
@@ -95,6 +96,9 @@ inline int cicle_process(cycle_t * cycle)
 		if(ret == -1)
 		{
 			break;
+		}else if(ret > 0)
+		{
+			// LOGD("action_process :%d\n",ret);
 		}
 		ngx_time_update();
 		ngx_event_expire_timers(&cycle->timeout);
@@ -106,11 +110,13 @@ inline int cicle_process(cycle_t * cycle)
 			break;
 		}
 	}
+	LOGD("cicle_process end.\n");
 	return 0;
 }
 
 inline int cicle_process_loop(cycle_t * cycle)
 {
+	LOGD("cicle_process_loop begin.\n");
 	while(1){
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
 		if(timeout == NGX_TIMER_INFINITE)
@@ -121,11 +127,15 @@ inline int cicle_process_loop(cycle_t * cycle)
 		if(ret == -1)
 		{
 			break;
+		}else if(ret > 0)
+		{
+			// LOGD("action_process :%d\n",ret);
 		}
 		ngx_event_expire_timers(&cycle->timeout);
 		safe_process_event(cycle);
 		ngx_event_process_posted(&cycle->posted);
 	}
+	LOGD("cicle_process_loop end.\n");
 	return 0;
 }
 

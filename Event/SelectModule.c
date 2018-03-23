@@ -169,9 +169,9 @@ int select_module_process(select_module_t * module,int milliseconds)
 
 void select_module_event_handler(event_t *ev)
 {
-	ASSERTM(ev != NULL);
+	ASSERT(ev != NULL);
 	select_module_t * module = (select_module_t *)ev->data;
-	ASSERTM(module != NULL);
+	ASSERT(module != NULL);
 	int events_cur_count = module->events_index;
 	for(int i = 0;i < events_cur_count;i++)
 	{
@@ -181,7 +181,7 @@ void select_module_event_handler(event_t *ev)
 			continue;
 		}
 		socket_t *so = (socket_t*)event->data;
-		ASSERTM(so != NULL);
+		ASSERT(so != NULL);
 		if(so->read == event)
 		{
 			if(FD_ISSET(so->handle,&module->read_set)){

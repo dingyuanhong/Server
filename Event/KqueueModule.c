@@ -74,7 +74,7 @@ int kqueue_module_process(kqueue_module_t * module,int milliseconds)
 		events_ptr = (struct kevent*)MALLOC(sizeof(struct kevent)*events_count);
 		if(events_ptr == NULL)
 		{
-			ABORTM("memory not enough.");
+			ABORTL("memory not enough.");
 			return -1;
 		}
 
@@ -102,13 +102,13 @@ int kqueue_module_process(kqueue_module_t * module,int milliseconds)
 void kqueue_module_event_handler(event_t *ev)
 {
 	kqueue_module_t * module = (kqueue_module_t *)ev->data;
-	ASSERTM(module != NULL);
+	ASSERT(module != NULL);
 	struct kevent *events_ptr = (struct kevent *)module->events;
-	ASSERTM(events_ptr != NULL);
+	ASSERT(events_ptr != NULL);
 	for(int i = 0 ; i < module->events_count;i++)
 	{
 		struct kqueue_event *event_ptr = events_ptr[i];
-		ASSERTM(event_ptr != NULL);
+		ASSERT(event_ptr != NULL);
 		int events = event_ptr->events;
 		socket_t *so = (socket_t*)event_ptr->udata;
 

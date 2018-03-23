@@ -3,9 +3,9 @@
 
 #include "../Core/Core.h"
 
-struct event_s;
+typedef struct event_s event_t;
 
-typedef int (*event_handler_pt)(struct event_s *ev);
+typedef int (*event_handler_pt)(event_t *ev);
 
 typedef struct event_s{
 	event_handler_pt  handler;

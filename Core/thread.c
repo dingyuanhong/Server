@@ -41,7 +41,7 @@
 #endif
 
 #include "thread.h"
-#include "LogUtil.h"
+#include "log.h"
 
 #undef NANOSEC
 #define NANOSEC ((uint64_t) 1e9)
@@ -97,12 +97,12 @@ int uv_thread_create(uv_thread_t *tid, void (*entry)(void *arg), void *arg) {
    */
 #if defined(__APPLE__)
   if (getrlimit(RLIMIT_STACK, &lim)){
-    ABORTL("uv_thread_create");
+    ABORTI(__func__);
   }
 
   attr = &attr_storage;
   if (pthread_attr_init(attr)){
-    ABORTL("uv_thread_create");
+    ABORTI(__func__);
   }
 
   if (lim.rlim_cur != RLIM_INFINITY) {
@@ -111,7 +111,7 @@ int uv_thread_create(uv_thread_t *tid, void (*entry)(void *arg), void *arg) {
 
     if (lim.rlim_cur >= PTHREAD_STACK_MIN)
       if (pthread_attr_setstacksize(attr, lim.rlim_cur)){
-        ABORTL("uv_thread_create");
+        ABORTI(__func__);
       }
   }
 #else
@@ -149,17 +149,17 @@ int uv_mutex_init(uv_mutex_t* mutex) {
   int err;
 
   if (pthread_mutexattr_init(&attr)){
-    ABORTL("uv_mutex_init");
+	  ABORTI(__func__);
   }
 
   if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK)){
-    ABORTL("uv_mutex_init");
+	  ABORTI(__func__);
   }
 
   err = pthread_mutex_init(mutex, &attr);
 
   if (pthread_mutexattr_destroy(&attr)){
-    ABORTL("uv_mutex_init");
+	  ABORTI(__func__);
   }
 
   return -err;
@@ -169,14 +169,14 @@ int uv_mutex_init(uv_mutex_t* mutex) {
 
 void uv_mutex_destroy(uv_mutex_t* mutex) {
   if (pthread_mutex_destroy(mutex)){
-    ABORTL("uv_mutex_destroy");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_mutex_lock(uv_mutex_t* mutex) {
   if (pthread_mutex_lock(mutex)){
-    ABORTL("uv_mutex_lock");
+    ABORTI(__func__);
   }
 }
 
@@ -187,7 +187,7 @@ int uv_mutex_trylock(uv_mutex_t* mutex) {
   err = pthread_mutex_trylock(mutex);
   if (err) {
     if (err != EBUSY && err != EAGAIN){
-      ABORTL("uv_mutex_trylock");
+      ABORTI(__func__);
     }
     return -EBUSY;
   }
@@ -198,7 +198,7 @@ int uv_mutex_trylock(uv_mutex_t* mutex) {
 
 void uv_mutex_unlock(uv_mutex_t* mutex) {
   if (pthread_mutex_unlock(mutex)){
-    ABORTL("uv_mutex_unlock");
+    ABORTI(__func__);
   }
 }
 
@@ -210,14 +210,14 @@ int uv_rwlock_init(uv_rwlock_t* rwlock) {
 
 void uv_rwlock_destroy(uv_rwlock_t* rwlock) {
   if (pthread_rwlock_destroy(rwlock)){
-    ABORTL("uv_rwlock_destroy");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_rwlock_rdlock(uv_rwlock_t* rwlock) {
   if (pthread_rwlock_rdlock(rwlock)){
-    ABORTL("uv_rwlock_rdlock");
+    ABORTI(__func__);
   }
 }
 
@@ -228,7 +228,7 @@ int uv_rwlock_tryrdlock(uv_rwlock_t* rwlock) {
   err = pthread_rwlock_tryrdlock(rwlock);
   if (err) {
     if (err != EBUSY && err != EAGAIN){
-      ABORTL("uv_rwlock_tryrdlock");
+      ABORTI(__func__);
     }
     return -EBUSY;
   }
@@ -239,14 +239,14 @@ int uv_rwlock_tryrdlock(uv_rwlock_t* rwlock) {
 
 void uv_rwlock_rdunlock(uv_rwlock_t* rwlock) {
   if (pthread_rwlock_unlock(rwlock)){
-    ABORTL("uv_rwlock_rdunlock");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_rwlock_wrlock(uv_rwlock_t* rwlock) {
   if (pthread_rwlock_wrlock(rwlock)){
-    ABORTL("uv_rwlock_wrlock");
+    ABORTI(__func__);
   }
 }
 
@@ -257,7 +257,7 @@ int uv_rwlock_trywrlock(uv_rwlock_t* rwlock) {
   err = pthread_rwlock_trywrlock(rwlock);
   if (err) {
     if (err != EBUSY && err != EAGAIN){
-      ABORTL("uv_rwlock_trywrlock");
+      ABORTI(__func__);
     }
     return -EBUSY;
   }
@@ -268,14 +268,14 @@ int uv_rwlock_trywrlock(uv_rwlock_t* rwlock) {
 
 void uv_rwlock_wrunlock(uv_rwlock_t* rwlock) {
   if (pthread_rwlock_unlock(rwlock)){
-    ABORTL("uv_rwlock_wrunlock");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_once(uv_once_t* guard, void (*callback)(void)) {
   if (pthread_once(guard, callback)){
-    ABORTL("uv_once");
+    ABORTI(__func__);
   }
 }
 
@@ -372,21 +372,21 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
   if (err == KERN_RESOURCE_SHORTAGE)
     return -ENOMEM;
 
-  ABORTL("uv_sem_init");
+  ABORTI(__func__);
   return -EINVAL;  /* Satisfy the compiler. */
 }
 
 
 void uv_sem_destroy(uv_sem_t* sem) {
   if (semaphore_destroy(mach_task_self(), *sem)){
-    ABORTL("uv_sem_destroy");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_sem_post(uv_sem_t* sem) {
   if (semaphore_signal(*sem)){
-    ABORTL("uv_sem_post");
+    ABORTI(__func__);
   }
 }
 
@@ -399,7 +399,7 @@ void uv_sem_wait(uv_sem_t* sem) {
   while (r == KERN_ABORTED);
 
   if (r != KERN_SUCCESS){
-    ABORTL("uv_sem_wait");
+    ABORTI(__func__);
   }
 }
 
@@ -417,7 +417,7 @@ int uv_sem_trywait(uv_sem_t* sem) {
   if (err == KERN_OPERATION_TIMED_OUT)
     return -EAGAIN;
 
-  ABORTL();
+  ABORTI();
   return -EINVAL;  /* Satisfy the compiler. */
 }
 #endif
@@ -439,7 +439,7 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
   if (-1 == semop(semid, &buf, 1)) {
     err = errno;
     if (-1 == semctl(*sem, 0, IPC_RMID)){
-      ABORTL("uv_sem_init");
+      ABORTI(__func__);
     }
     return -err;
   }
@@ -450,7 +450,7 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
 
 void uv_sem_destroy(uv_sem_t* sem) {
   if (-1 == semctl(*sem, 0, IPC_RMID)){
-    ABORTL("uv_sem_destroy");
+    ABORTI(__func__);
   }
 }
 
@@ -462,7 +462,7 @@ void uv_sem_post(uv_sem_t* sem) {
   buf.sem_flg = 0;
 
   if (-1 == semop(*sem, &buf, 1)){
-    ABORTL("uv_sem_post");
+    ABORTI(__func__);
   }
 }
 
@@ -479,7 +479,7 @@ void uv_sem_wait(uv_sem_t* sem) {
   while (op_status == -1 && errno == EINTR);
 
   if (op_status){
-    ABORTL("uv_sem_wait");
+    ABORTI(__func__);
   }
 }
 
@@ -498,7 +498,7 @@ int uv_sem_trywait(uv_sem_t* sem) {
   if (op_status) {
     if (errno == EAGAIN)
       return -EAGAIN;
-    ABORTL("uv_sem_trywait");
+    ABORTI(__func__);
   }
 
   return 0;
@@ -515,14 +515,14 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
 
 void uv_sem_destroy(uv_sem_t* sem) {
   if (sem_destroy(sem)){
-    ABORTL("uv_sem_destroy");
+    ABORTI(__func__);
   }
 }
 
 
 void uv_sem_post(uv_sem_t* sem) {
   if (sem_post(sem)){
-    ABORTL("uv_sem_post");
+    ABORTI(__func__);
   }
 }
 
@@ -535,7 +535,7 @@ void uv_sem_wait(uv_sem_t* sem) {
   while (r == -1 && errno == EINTR);
 
   if (r){
-    ABORTL("uv_sem_wait");
+    ABORTI(__func__);
   }
 }
 
@@ -550,7 +550,7 @@ int uv_sem_trywait(uv_sem_t* sem) {
   if (r) {
     if (errno == EAGAIN)
       return -EAGAIN;
-    ABORTL("uv_sem_trywait");
+    ABORTI(__func__);
   }
 
   return 0;
@@ -611,11 +611,11 @@ void uv_cond_destroy(uv_cond_t* cond) {
   int err;
 
   if (pthread_mutex_init(&mutex, NULL)){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 
   if (pthread_mutex_lock(&mutex)){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 
   ts.tv_sec = 0;
@@ -623,38 +623,38 @@ void uv_cond_destroy(uv_cond_t* cond) {
 
   err = pthread_cond_timedwait_relative_np(cond, &mutex, &ts);
   if (err != 0 && err != ETIMEDOUT){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 
   if (pthread_mutex_unlock(&mutex)){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 
   if (pthread_mutex_destroy(&mutex)){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 #endif /* defined(__APPLE__) && defined(__MACH__) */
 
   if (pthread_cond_destroy(cond)){
-    ABORTL("uv_cond_destroy");
+    ABORTI(__func__);
   }
 }
 
 void uv_cond_signal(uv_cond_t* cond) {
   if (pthread_cond_signal(cond)){
-    ABORTL("uv_cond_signal");
+    ABORTI(__func__);
   }
 }
 
 void uv_cond_broadcast(uv_cond_t* cond) {
   if (pthread_cond_broadcast(cond)){
-    ABORTL("uv_cond_broadcast");
+    ABORTI(__func__);
   }
 }
 
 void uv_cond_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
   if (pthread_cond_wait(cond, mutex)){
-    ABORTL("uv_cond_wait");
+    ABORTI(__func__);
   }
 }
 
@@ -689,7 +689,7 @@ int uv_cond_timedwait(uv_cond_t* cond, uv_mutex_t* mutex, uint64_t timeout) {
   if (r == ETIMEDOUT)
     return -ETIMEDOUT;
 
-  ABORTL("uv_cond_timedwait\n");
+  ABORTI(__func__);
   return -EINVAL;  /* Satisfy the compiler. */
 }
 
@@ -701,7 +701,7 @@ int uv_barrier_init(uv_barrier_t* barrier, unsigned int count) {
 
 void uv_barrier_destroy(uv_barrier_t* barrier) {
   if (pthread_barrier_destroy(barrier)){
-	ABORTL("uv_barrier_destroy\n");
+	ABORTI(__func__);
   }
 }
 
@@ -709,8 +709,7 @@ void uv_barrier_destroy(uv_barrier_t* barrier) {
 int uv_barrier_wait(uv_barrier_t* barrier) {
   int r = pthread_barrier_wait(barrier);
   if (r && r != PTHREAD_BARRIER_SERIAL_THREAD){
-    // VLOGE("uv_barrier_wait");
-    ABORTL("uv_barrier_wait\n");
+    ABORTI(__func__);
   }
   return r == PTHREAD_BARRIER_SERIAL_THREAD;
 }
@@ -723,8 +722,7 @@ int uv_key_create(uv_key_t* key) {
 
 void uv_key_delete(uv_key_t* key) {
   if (pthread_key_delete(*key)){
-    // VLOGE("uv_key_delete");
-    ABORTL("uv_key_delete\n");
+    ABORTI(__func__);
   }
 }
 
@@ -736,8 +734,7 @@ void* uv_key_get(uv_key_t* key) {
 
 void uv_key_set(uv_key_t* key, void* value) {
   if (pthread_setspecific(*key, value)){
-    // VLOGE("uv_key_set");
-    ABORTL("uv_key_set");
+    ABORTI(__func__);
   }
 }
 

@@ -15,7 +15,7 @@ epoll_module_t * epoll_module_create(int concurrent)
 {
 	epoll_module_t *module = (epoll_module_t*)MALLOC(sizeof(epoll_module_t));
 	module->handle = epoll_create(concurrent);
-	ABORTM(module->handle == -1);
+	ABORTI(module->handle == -1);
 	// LOGD("epoll module %x\n",module);
 	module->process = (event_t*)MALLOC(sizeof(event_t));
 	module->process->data = module;
@@ -69,7 +69,7 @@ int epoll_module_process(epoll_module_t * module,int milliseconds)
 		events_ptr = (struct epoll_event*)MALLOC(sizeof(struct epoll_event)*events_count);
 		if(events_ptr == NULL)
 		{
-			ABORTM("memory not enough.\n");
+			ABORTI("memory not enough.\n");
 			return -1;
 		}
 		module->events = events_ptr;
@@ -93,13 +93,13 @@ int epoll_module_process(epoll_module_t * module,int milliseconds)
 void epoll_module_event_handler(event_t *ev)
 {
 	epoll_module_t * module = (epoll_module_t *)ev->data;
-	ASSERTM(module != NULL);
+	ASSERT(module != NULL);
 	struct epoll_event *events_ptr = (struct epoll_event *)module->events;
-	ASSERTM(events_ptr != NULL);
+	ASSERT(events_ptr != NULL);
 	for(int i = 0 ; i < module->events_count;i++)
 	{
 		struct epoll_event *event = &events_ptr[i];
-		ASSERTM(event != NULL);
+		ASSERT(event != NULL);
 		int events = event->events;
 		socket_t *so = (socket_t *)event->data.ptr;
 

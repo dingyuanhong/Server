@@ -18,17 +18,18 @@
 #include <semaphore.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
-#include "TargetConditionals.h"
-#ifdef TARGET_OS_MAC
-typedef struct sem_mac_s{
-  sem_t *sem;
-  char * name;
-}sem_mac_t;
-# define UV_PLATFORM_SEM_T sem_mac_t
-#define clock_t clockid_t
-#define CLOCK_MONOTONIC_COARSE CLOCK_MONOTONIC
-#define USE_USERDEFINED_BARRIER
-#endif
+	#include "TargetConditionals.h"
+	#ifdef TARGET_OS_MAC
+		typedef struct sem_mac_s{
+		  sem_t *sem;
+		  char * name;
+		}sem_mac_t;
+
+		#define UV_PLATFORM_SEM_T sem_mac_t
+		#define clock_t clockid_t
+		#define CLOCK_MONOTONIC_COARSE CLOCK_MONOTONIC
+		#define USE_USERDEFINED_BARRIER
+	#endif
 #endif
 
 #ifndef UV_PLATFORM_SEM_T

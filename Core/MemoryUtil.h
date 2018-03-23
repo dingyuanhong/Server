@@ -13,5 +13,7 @@
 
 #define min(x,y) ((x)>(y)?(y):(x))
 #define max(x,y) ((x)>(y)?(x):(y))
+#define MIN min
+#define MAX max
 
 #endif

@@ -9,9 +9,9 @@ int connection_close_handler(event_t *ev)
 	connection_t *c = (connection_t*)ev->data;
 	int ret = 0;
 	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
-	LOGA(ret == 0,"socket_linger %d\n",ret);
+	ABORTIF(ret == 0,"socket_linger %d\n",ret);
 	// ret = shutdown(c->so.handle,SHUT_WR);
-	// LOGA(ret == 0,"shutodwn %d\n",ret);
+	// ABORTIF(ret == 0,"shutodwn %d\n",ret);
 	ret = close(c->so.handle);
 	if(ret == 0)
 	{
@@ -114,8 +114,8 @@ int main(int argc,char* argv[])
 	ngx_time_init();
 
 	cycle_t *cycle = createCycle(MAX_FD_COUNT);
-	ABORTM(cycle == NULL);
-	ABORTM(cycle->core == NULL);
+	ABORTI(cycle == NULL);
+	ABORTI(cycle->core == NULL);
 	event_t *process = createEvent(cycle_handler,cycle);
 	add_event(cycle,process);
 	cicle_process(cycle);

@@ -6,8 +6,7 @@
 #include "KqueueModule.h"
 #include "SelectModule.h"
 
-typedef struct core_s{
-}core_t;
+typedef struct core_s core_t;
 
 core_t * action_create(int concurrent);
 int action_done(core_t * core);

@@ -78,6 +78,15 @@ typedef struct uv_once_s {
 
 #define UV_ONCE_INIT { 0, NULL }
 
+#include <errno.h>
+#define UV_EINVAL EINVAL
+#define UV_EBUSY EBUSY
+#define UV_ENOMEM ENOMEN
+#define UV_EACCES EACCES
+#define UV_EAGAIN EAGAIN
+#define UV_EIO EIO
+#define UV_ETIMEDOUT ETIMEDOUT
+
 #endif
 
 #endif

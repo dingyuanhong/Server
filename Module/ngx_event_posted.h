@@ -27,7 +27,7 @@
 
 
 
-static inline void ngx_event_process_posted(ngx_queue_t *posted)
+inline void ngx_event_process_posted(ngx_queue_t *posted)
 {
 	ngx_queue_t *q;
 	event_t  *ev;

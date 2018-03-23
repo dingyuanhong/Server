@@ -9,24 +9,19 @@
 #include<unistd.h>
 #endif
 
-#define ngx_pid_t uint32_t
-typedef uint32_t u_int;
-// typedef uint32_t u_long;
 
-#define ngx_min min
-#define ngx_cdecl
 
-#define  NGX_OK          0
-#define  NGX_ERROR      -1
-#define  NGX_AGAIN      -2
-#define  NGX_BUSY       -3
-
-#include "OSUtil.h"
-#include "LogUtil.h"
+#include "log.h"
 #include "MemoryUtil.h"
-#include "SocketUtil.h"
-#include "TimeUtil.h"
+
+#include "os_util.h"
+#include "time_util.h"
+#include "socket_util.h"
 #include "Lock/atomic.h"
+
+#define  NGX_OK         0
+#define  NGX_ERROR      0xFFFFFFFF
+
 #include "Queue/ngx_array.h"
 #include "Queue/ngx_list.h"
 #include "Queue/ngx_queue.h"
@@ -57,7 +52,15 @@ typedef ngx_rbtree_key_int_t  ngx_msec_int_t;
 #define CR     (u_char) '\r'
 #define CRLF   "\r\n"
 
+#define ngx_pid_t uint32_t
+typedef uint32_t u_int;
+// typedef uint32_t u_long;
 
+#define ngx_min min
+#define ngx_cdecl
+
+#define  NGX_AGAIN EAGAIN
+#define  NGX_BUSY  EBUSY
 
 #include "ngx_string.h"
 

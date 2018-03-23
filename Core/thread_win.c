@@ -22,16 +22,15 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
-#include "thread.h"
 
 #ifdef _WIN32
 
-#define SetErrorMode
+#include "thread.h"
+#include "core.h"
 #define uv_winapi_init
-#define uv_fatal_error(A,B) printf("%s %d\n",(B),(A))
+#define uv_fatal_error(A,B) LOGE("%s errno:%d\n",(B),(A))
 #define uv_translate_sys_error(A) (A)
-#define VABORT
-#define uv_free free
+#define uv_free FREE
 
 
 #include <process.h>
@@ -101,14 +100,13 @@ static void uv__once_inner(uv_once_t* guard, void (*callback)(void)) {
 	}
 }
 
-
 void uv_once(uv_once_t* guard, void (*callback)(void)) {
-  /* Fast case - avoid WaitForSingleObject. */
-  if (guard->ran) {
-    return;
-  }
+	/* Fast case - avoid WaitForSingleObject. */
+	if (guard->ran) {
+		return;
+	}
 
-  uv__once_inner(guard, callback);
+	uv__once_inner(guard, callback);
 }
 
 #define STATIC_ASSERT(expr)                                                   \
@@ -122,33 +120,33 @@ static uv_once_t uv__current_thread_init_guard = UV_ONCE_INIT;
 
 
 static void uv__init_current_thread_key(void) {
-  if (uv_key_create(&uv__current_thread_key)){
-    VABORT();
-  }
+	if (uv_key_create(&uv__current_thread_key)){
+		ABORTI(__func__);
+	}
 }
 
 
 struct thread_ctx {
-  void (*entry)(void* arg);
-  void* arg;
-  uv_thread_t self;
+	void (*entry)(void* arg);
+	void* arg;
+	uv_thread_t self;
 };
 
 
 static UINT __stdcall uv__thread_start(void* arg) {
-  struct thread_ctx *ctx_p;
-  struct thread_ctx ctx;
+	struct thread_ctx *ctx_p;
+	struct thread_ctx ctx;
 
-  ctx_p = (thread_ctx*)arg;
-  ctx = *ctx_p;
-  uv_free(ctx_p);
+	ctx_p = (thread_ctx*)arg;
+	ctx = *ctx_p;
+	uv_free(ctx_p);
 
-  uv_once(&uv__current_thread_init_guard, uv__init_current_thread_key);
-  uv_key_set(&uv__current_thread_key, (void*) ctx.self);
+	uv_once(&uv__current_thread_init_guard, uv__init_current_thread_key);
+	uv_key_set(&uv__current_thread_key, (void*) ctx.self);
 
-  ctx.entry(ctx.arg);
+	ctx.entry(ctx.arg);
 
-  return 0;
+	return 0;
 }
 
 
@@ -370,21 +368,21 @@ int uv_sem_init(uv_sem_t* sem, unsigned int value) {
 
 void uv_sem_destroy(uv_sem_t* sem) {
   if (!CloseHandle(*sem)){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
 
 void uv_sem_post(uv_sem_t* sem) {
   if (!ReleaseSemaphore(*sem, 1, NULL)){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
 
 void uv_sem_wait(uv_sem_t* sem) {
   if (WaitForSingleObject(*sem, INFINITE) != WAIT_OBJECT_0){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
@@ -398,7 +396,7 @@ int uv_sem_trywait(uv_sem_t* sem) {
   if (r == WAIT_TIMEOUT)
     return UV_EAGAIN;
 
-  VABORT();
+  ABORTI(__func__);
   return -1; /* Satisfy the compiler. */
 }
 
@@ -466,10 +464,10 @@ int uv_cond_init(uv_cond_t* cond) {
 
 static void uv_cond_fallback_destroy(uv_cond_t* cond) {
   if (!CloseHandle(cond->fallback.broadcast_event)){
-    VABORT();
+    ABORTI(__func__);
   }
   if (!CloseHandle(cond->fallback.signal_event)){
-    VABORT();
+    ABORTI(__func__);
   }
   DeleteCriticalSection(&cond->fallback.waiters_count_lock);
 }
@@ -585,21 +583,21 @@ static int uv_cond_wait_helper(uv_cond_t* cond, uv_mutex_t* mutex,
   if (result == WAIT_TIMEOUT)
     return UV_ETIMEDOUT;
 
-  VABORT();
+  ABORTI(__func__);
   return -1; /* Satisfy the compiler. */
 }
 
 
 static void uv_cond_fallback_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
   if (uv_cond_wait_helper(cond, mutex, INFINITE)){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
 
 static void uv_cond_condvar_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
   if (!pSleepConditionVariableCS(&cond->cond_var, mutex, INFINITE)){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
@@ -623,7 +621,7 @@ static int uv_cond_condvar_timedwait(uv_cond_t* cond,
   if (pSleepConditionVariableCS(&cond->cond_var, mutex, (DWORD)(timeout / 1e6)))
     return 0;
   if (GetLastError() != ERROR_TIMEOUT){
-    VABORT();
+    ABORTI(__func__);
   }
   return UV_ETIMEDOUT;
 }
@@ -711,7 +709,7 @@ int uv_key_create(uv_key_t* key) {
 
 void uv_key_delete(uv_key_t* key) {
   if (TlsFree(key->tls_index) == FALSE)
-    VABORT();
+    ABORTI(__func__);
   key->tls_index = TLS_OUT_OF_INDEXES;
 }
 
@@ -722,7 +720,7 @@ void* uv_key_get(uv_key_t* key) {
   value = TlsGetValue(key->tls_index);
   if (value == NULL)
     if (GetLastError() != ERROR_SUCCESS){
-      VABORT();
+      ABORTI(__func__);
     }
 
   return value;
@@ -731,7 +729,7 @@ void* uv_key_get(uv_key_t* key) {
 
 void uv_key_set(uv_key_t* key, void* value) {
   if (TlsSetValue(key->tls_index, value) == FALSE){
-    VABORT();
+    ABORTI(__func__);
   }
 }
 
