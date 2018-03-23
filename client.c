@@ -1,8 +1,38 @@
 #include "Core/Core.h"
 #include "Event/EventActions.h"
 #include "Module/module.h"
+#include "Module/slave.h"
+#include "Function/echo.h"
+#include <signal.h>
 
 #define MAX_FD_COUNT 1024*1024
+static cycle_t * g_signal_master = NULL;
+
+#ifdef _WIN32
+void processSignal()
+{}
+#else
+static void handle_signal_term(int sig)
+{
+	LOGI("signal exit:%d",sig);
+	cycle_t *cycle = g_signal_master;
+	if(cycle != NULL)
+	{
+		if(cycle->data != NULL)
+		{
+			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
+			stop_slave(slave);
+		}
+		cycle->stop = 1;
+	}
+}
+
+void processSignal(){
+	signal(SIGTERM , handle_signal_term);
+	signal(SIGINT , handle_signal_term);
+	signal(SIGQUIT , handle_signal_term);
+}
+#endif
 
 int connection_close_handler(event_t *ev)
 {
@@ -34,15 +64,16 @@ void connection_close(connection_t *c){
 
 int read_event_handler(event_t *ev)
 {
+	char byte[65536];
+	size_t len = 65536;
+
 	connection_t *c = (connection_t*)ev->data;
 	while(1){
-		char byte;
-		size_t len = 1;
 		LOGD("recv %d ...\n",c->so.handle);
 		int ret = recv(c->so.handle,&byte,len,0);
 		if(ret == len)
 		{
-			break;
+			continue;
 		}
 		else if(ret > 0)
 		{
@@ -101,12 +132,12 @@ int cycle_handler(event_t *ev)
 	}
 	LOGD("socket connect %d\n",fd);
 	connection_t *conn = createConn(cycle,fd);
-	conn->so.read = createEvent(error_event_handler,conn);
-	conn->so.write = createEvent(error_event_handler,conn);
+	conn->so.read = createEvent(read_event_handler,conn);
+	conn->so.write = createEvent(echo_write_event_handler,conn);
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection_event(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
-	add_timer(cycle,conn->so.read,500);
+	add_timer(cycle,conn->so.write,500);
 
 	add_event(cycle,ev);
 	return 0;
@@ -121,9 +152,13 @@ int main(int argc,char* argv[])
 	cycle_t *cycle = createCycle(MAX_FD_COUNT);
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
+
+	g_signal_master = cycle;
+	processSignal();
+
 	event_t *process = createEvent(cycle_handler,cycle);
 	add_event(cycle,process);
-	cicle_process(cycle);
+	cicle_process_master(cycle);
 	deleteEvent(&process);
 	deleteCycle(&cycle);
 	return 0;

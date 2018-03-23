@@ -100,10 +100,10 @@ inline void safe_process_event(cycle_t *cycle)
 	}
 }
 
-static inline int cicle_process(cycle_t * cycle)
+static inline int cicle_process_master(cycle_t * cycle)
 {
 	LOGD("cicle_process begin.\n");
-	while(1){
+	while(!cycle->stop){
 		ngx_time_update();
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
 		if(!event_is_empty(cycle))
@@ -136,10 +136,14 @@ static inline int cicle_process(cycle_t * cycle)
 	return 0;
 }
 
-static inline int cicle_process_loop(cycle_t * cycle)
+static inline int cicle_process_slave(cycle_t * cycle)
 {
 	LOGD("cicle_process_loop begin.\n");
-	while(1){
+	if(cycle->index != -1)
+	{
+		thread_affinity_cpu(cycle->index);
+	}
+	while(!cycle->stop){
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
 		if(!event_is_empty(cycle))
 		{

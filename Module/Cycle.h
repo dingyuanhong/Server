@@ -7,6 +7,9 @@
 
 typedef struct cycle_s{
 	core_t * core;
+	int stop;
+	void * data;
+	int32_t  index;
 	uint32_t connection_count;
 
 	ngx_rbtree_t timeout;
@@ -20,6 +23,9 @@ typedef struct cycle_s{
 inline cycle_t * createCycle(int concurrent)
 {
 	cycle_t * cycle = MALLOC(sizeof(cycle_t));
+	cycle->data = NULL;
+	cycle->stop = 0;
+	cycle->index = -1;
 	cycle->core = action_create(concurrent);
 	ngx_event_timer_init(&cycle->timeout);
 	ngx_queue_init(&cycle->posted);
@@ -30,16 +36,18 @@ inline cycle_t * createCycle(int concurrent)
 	return cycle;
 }
 
-inline void deleteCycle(cycle_t ** cycle)
+inline void deleteCycle(cycle_t ** cycle_ptr)
 {
-	if(cycle != NULL)
+	if(cycle_ptr != NULL)
 	{
-		if(*cycle != NULL)
+		if(*cycle_ptr != NULL)
 		{
-			action_done((*cycle)->core);
-			FREE(*cycle);
+			cycle_t * cycle = *cycle_ptr;
+			cycle->stop = 1;
+			action_done(cycle->core);
+			FREE(cycle);
 		}
-		*cycle = NULL;
+		*cycle_ptr = NULL;
 	}
 }
 

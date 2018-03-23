@@ -16,6 +16,7 @@ ngx_array_create(ngx_uint_t n, size_t size)
     }
 
     if (ngx_array_init(a, n, size) != NGX_OK) {
+		FREE(a);
         return NULL;
     }
 
@@ -55,6 +56,7 @@ ngx_array_push(ngx_array_t *a)
             }
 
             memcpy(new, a->elts, size);
+			FREE(a->elts);
             a->elts = new;
             a->nalloc *= 2;
         }
@@ -88,6 +90,7 @@ ngx_array_push_n(ngx_array_t *a, ngx_uint_t n)
             }
 
             memcpy(new, a->elts, a->nelts * a->size);
+			FREE(a->elts);
             a->elts = new;
             a->nalloc = nalloc;
         }

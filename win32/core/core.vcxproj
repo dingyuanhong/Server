@@ -98,6 +98,7 @@
     <ClInclude Include="..\..\Event\KqueueModule.h" />
     <ClInclude Include="..\..\Event\SelectModule.h" />
     <ClInclude Include="..\..\Event\Socket.h" />
+    <ClInclude Include="..\..\Function\echo.h" />
     <ClInclude Include="..\..\Module\Connection.h" />
     <ClInclude Include="..\..\Module\Cycle.h" />
     <ClInclude Include="..\..\Module\module.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="..\..\Event\EventActions.c" />
     <ClCompile Include="..\..\Event\KqueueModule.c" />
     <ClCompile Include="..\..\Event\SelectModule.c" />
+    <ClCompile Include="..\..\Function\echo.c" />
     <ClCompile Include="..\..\Module\ngx_event_timer.c" />
     <ClCompile Include="..\..\Module\ngx_times.c" />
   </ItemGroup>

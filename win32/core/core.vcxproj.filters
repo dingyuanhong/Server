@@ -28,6 +28,9 @@
     <Filter Include="源文件\Core\Queue">
       <UniqueIdentifier>{79f0cd3b-c6f7-4a35-95b2-1d97bdaf0d9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\Function">
+      <UniqueIdentifier>{bcfb3f95-cee6-4b4a-9464-3e1c1fa01149}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -117,6 +120,9 @@
     <ClInclude Include="..\..\Core\type.h">
       <Filter>源文件\Core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Function\echo.h">
+      <Filter>源文件\Function</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Core\Lock\Spinlock.c">
@@ -172,6 +178,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Module\ngx_times.c">
       <Filter>源文件\Module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Function\echo.c">
+      <Filter>源文件\Function</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

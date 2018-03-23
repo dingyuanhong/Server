@@ -1,21 +1,37 @@
 #include "Core/Core.h"
 #include "Event/EventActions.h"
 #include "Module/module.h"
-#include "Core/thread.h"
+#include "Module/slave.h"
+#include "Function/echo.h"
+#include <signal.h>
 
 #define MAX_FD_COUNT 1024*1024
-static int max_thread_count = 0;
-ngx_array_t *cycle_pool = NULL;
-int cycle_pool_index = 0;
-ngx_array_t *thread_pool = NULL;
-
-static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
+static cycle_t * g_signal_master = NULL;
+#ifdef _WIN32
+void processSignal()
+{}
+#else
+static void handle_signal_term(int sig)
 {
-	if(a->nalloc > n){
-		return (u_char *) a->elts + a->size * n;
+	LOGI("signal exit:%d",sig);
+	cycle_t *cycle = g_signal_master;
+	if(cycle != NULL)
+	{
+		if(cycle->data != NULL)
+		{
+			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
+			stop_slave(slave);
+		}
+		cycle->stop = 1;
 	}
-	return NULL;
 }
+
+void processSignal(){
+	signal(SIGTERM , handle_signal_term);
+	signal(SIGINT , handle_signal_term);
+	signal(SIGQUIT , handle_signal_term);
+}
+#endif
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 
@@ -112,62 +128,42 @@ int accept_handler(event_t *ev)
 	return 0;
 }
 
-int connection_add_event(event_t *ev)
+void accept_connection(connection_t *conn)
 {
-	connection_t * conn = (connection_t*)ev->data;
-	deleteEvent(&ev);
-	conn->so.read = createEvent(error_event_handler,conn);
+	ASSERT(conn != NULL);
+	conn->so.read = createEvent(echo_read_event_handler,conn);
 	conn->so.write = NULL;
 	conn->so.error = createEvent(error_event_handler,conn);
 	int ret = add_connection(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
-	return ret;
 }
 
+int connection_add_event(event_t *ev)
+{
+	connection_t * conn = (connection_t*)ev->data;
+	accept_connection(conn);
+	deleteEvent(&ev);
+	return 0;
+}
 
 void connection_add_event_sub(cycle_t * cycle,event_t *ev)
 {
 	SOCKET fd = (SOCKET)ev->data;
-	deleteEvent(&ev);
-	// LOGD("add_connection_event.%d\n",fd);
 	connection_t * conn = createConn(cycle,fd);
-	conn->so.read = createEvent(error_event_handler,conn);
-	conn->so.write = NULL;
-	conn->so.error = createEvent(error_event_handler,conn);
-	int ret = add_connection(conn);
-	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
-}
-
-void cycle_thread_cb(void* arg)
-{
-	cycle_t *cycle = (cycle_t*)arg;
-	cicle_process_loop(cycle);
+	accept_connection(conn);
+	deleteEvent(&ev);
 }
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 {
-	if(cycle_pool == NULL || thread_pool == NULL)
+	if(cycle->data == NULL)
 	{
 		add_event(cycle,createEvent(connection_add_event,createConn(cycle,fd)));
 	}else{
-		cycle_t ** subcycle_ptr = (cycle_t**)ngx_array_get(cycle_pool,cycle_pool_index%max_thread_count);
-		ABORTI(subcycle_ptr == NULL);
-		if(*subcycle_ptr == NULL)
-		{
-			cycle_t *subcycle = createCycle(MAX_FD_COUNT);
-			ABORTI(subcycle == NULL);
-			ABORTI(subcycle->core == NULL);
-			*subcycle_ptr = subcycle;
-
-			//启动线程
-			uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(thread_pool,cycle_pool_index%max_thread_count);
-			int ret = uv_thread_create(thread_id,cycle_thread_cb,subcycle);
-			ABORTI(ret != 0);
-		}
-		ABORTI(*subcycle_ptr == NULL);
-		safe_add_event(*subcycle_ptr,createEvent(NULL,(void*)fd),connection_add_event_sub);
-
-		cycle_pool_index++;
+		cycle_slave_t * slave = cycle->data;
+		cycle_t * cycle_sub = cycle_slave_next(slave);
+		ASSERT(cycle_sub != NULL);
+		safe_add_event(cycle_sub,createEvent(NULL,(void*)fd),connection_add_event_sub);
 	}
 	return 0;
 }
@@ -182,17 +178,25 @@ int main(int argc,char* argv[])
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
 
-	max_thread_count = (ngx_ncpu - 1)*2;
+	int max_thread_count = (ngx_ncpu - 1)*2;
 	if(max_thread_count > 0)
 	{
-		cycle_pool = ngx_array_create(max_thread_count,sizeof(cycle_t*));
-		thread_pool = ngx_array_create(max_thread_count,sizeof(uv_thread_t));
+		cycle->data = create_slave(MAX_FD_COUNT,max_thread_count);
 	}
+
+	g_signal_master = cycle;
+	processSignal();
 
 	event_t *process = createEvent(accept_handler,cycle);
 	add_event(cycle,process);
-	cicle_process(cycle);
+	cicle_process_master(cycle);
 	deleteEvent(&process);
+	if(cycle->data != NULL)
+	{
+		cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
+		delete_slave(&slave);
+		cycle->data = NULL;
+	}
 	deleteCycle(&cycle);
 	return 0;
 }
