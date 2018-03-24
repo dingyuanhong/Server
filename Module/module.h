@@ -124,7 +124,7 @@ static inline int cicle_process_master(cycle_t * cycle)
 			break;
 		}else if(ret > 0)
 		{
-			LOGD("action_process :%d\n",ret);
+			// LOGD("action_process :%d\n",ret);
 		}
 		ngx_time_update();
 		ngx_event_expire_timers(&cycle->timeout);
@@ -163,7 +163,7 @@ static inline int cicle_process_slave(cycle_t * cycle)
 			break;
 		}else if(ret > 0)
 		{
-			LOGD("action_process :%d\n",ret);
+			// LOGD("action_process :%d\n",ret);
 		}
 		ngx_event_expire_timers(&cycle->timeout);
 		safe_process_event(cycle);

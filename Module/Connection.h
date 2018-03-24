@@ -7,6 +7,7 @@
 typedef struct connection_s{
 	socket_t so;
 	cycle_t * cycle;
+	void * data;
 }connection_t;
 
 inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
@@ -16,6 +17,7 @@ inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
 	conn->so.read = NULL;
 	conn->so.write = NULL;
 	conn->so.error = NULL;
+	conn->data = NULL;
 	conn->cycle = cycle;
 	return conn;
 }

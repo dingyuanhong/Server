@@ -3,6 +3,7 @@
 #include "Function/connection_close.h"
 #include "Function/echo.h"
 #include "Function/signal.h"
+#include "Function/service.h"
 
 #define MAX_FD_COUNT 1024*1024
 
@@ -68,9 +69,9 @@ int accept_handler(event_t *ev)
 void accept_connection(connection_t *conn)
 {
 	ASSERT(conn != NULL);
-	conn->so.read = event_create(echo_read_event_handler,conn);
-	conn->so.write = NULL;
-	conn->so.error = event_create(error_event_handler,conn);
+	service_init(conn);
+	if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
+	if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
 	int ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }

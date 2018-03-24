@@ -3,46 +3,53 @@
 #include "Function/connection_close.h"
 #include "Function/echo.h"
 #include "Function/signal.h"
+#include "Function/service.h"
 
-#define MAX_FD_COUNT 1024*1024
 
-int read_event_handler(event_t *ev)
+int heartbeat_event_handler(event_t *ev)
 {
-	char byte[65536];
-	size_t len = 65536;
-
+	char byte[65535];
+	int len = 65535;
 	connection_t *c = (connection_t*)ev->data;
-	while(1){
-		LOGD("recv %d ...\n",c->so.handle);
-		int ret = recv(c->so.handle,&byte,len,0);
+	int ret = buffer_write(c,byte,len);
+	if(ret != -1)
+	{
+		timer_add(c->cycle,c->so.write,1000);
+	}
+	return 0;
+}
+
+int discard_read_event_handler(event_t *ev)
+{
+	char byte[65535];
+	int len = 65535;
+	connection_t *c = (connection_t*)ev->data;
+	while(1)
+	{
+		int ret = buffer_read(c,byte,len);
+		if(ret <= 0)
+		{
+			break;
+		}
 		if(ret == len)
 		{
 			continue;
 		}
-		else if(ret > 0)
-		{
-			break;
-		}
-		else if(ret == 0)
-		{
-			connection_remove(c);
-
-			break;
-		}else if(ret == -1)
-		{
-			if(EAGAIN == errno)
-			{
-				LOGD("recv again.\n");
-				break;
-			}
-			connection_remove(c);
-			break;
-		}
+		break;
 	}
-	return 1;
+	return 0;
 }
 
-int error_event_handler(event_t *ev)
+void control_init(connection_t * c)
+{
+	ASSERT(c != NULL);
+	c->so.write = event_create(heartbeat_event_handler,c);
+	c->so.read = event_create(discard_read_event_handler,c);
+}
+
+#define MAX_FD_COUNT 1024*1024
+
+static int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	connection_remove(c);
@@ -59,14 +66,12 @@ int cycle_handler(event_t *ev)
 	}
 	LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
-	conn->so.read = event_create(read_event_handler,conn);
-	conn->so.write = event_create(echo_write_event_handler,conn);
-	conn->so.error = event_create(error_event_handler,conn);
+	control_init(conn);
+	if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
+	if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
 	int ret = connection_cycle_add_(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
-	timer_add(cycle,conn->so.write,500);
-
-	event_add(cycle,ev);
+	timer_add(conn->cycle,conn->so.write,1000);
 	return 0;
 }
 
