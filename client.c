@@ -1,5 +1,6 @@
 #include "Module/module.h"
 #include "Module/slave.h"
+#include "Function/connection_close.h"
 #include "Function/echo.h"
 #include <signal.h>
 
@@ -33,16 +34,6 @@ void signal_init(){
 #endif
 
 
-static int connection_remove(connection_t * c)
-{
-	int ret = connection_cycle_del(c);
-	if(ret == 0){
-		connection_close(c);
-	}else{
-		LOGD("recv %d errno:%d\n",ret,errno);
-	}
-	return ret;
-}
 
 int read_event_handler(event_t *ev)
 {

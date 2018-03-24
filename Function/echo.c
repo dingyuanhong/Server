@@ -1,21 +1,12 @@
 #include "../Module/module.h"
 #include "echo.h"
+#include "connection_close.h"
 
 #ifndef _WIN32
 #include <sys/types.h>
 #include <sys/socket.h>
 #endif
 
-static int connection_remove(connection_t * c)
-{
-	int  r = connection_cycle_del(c);
-	if(r == 0){
-		event_add(c->cycle,c->so.error);
-	}else{
-		LOGD("recv %d errno:%d\n",r,errno);
-	}
-	return r;
-}
 
 int echo_buffer(connection_t * c,char * byte,size_t size){
 	while(1){

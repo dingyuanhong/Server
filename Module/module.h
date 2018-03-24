@@ -56,37 +56,6 @@ inline int connection_cycle_del(connection_t *conn)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
 
 
-//connection close
-
-static inline int connection_close_handler(event_t *ev)
-{
-	connection_t *c = (connection_t*)ev->data;
-	int ret = 0;
-	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
-	ABORTIF(ret != 0,"socket_linger %d\n",ret);
-	// ret = shutdown(c->so.handle,SHUT_WR);
-	// ABORTIF(ret != 0,"shutodwn %d\n",ret);
-	ret = close(c->so.handle);
-	if(ret == 0)
-	{
-		LOGD("connection closed:%d\n",c->so.handle);
-		connection_destroy(&c);
-	}else{
-		LOGD("connection closing:%d\n",c->so.handle);
-		event_add(c->cycle,ev);
-	}
-	return 0;
-}
-
-inline void connection_close(connection_t *c){
-	ASSERT(c != NULL);
-	ASSERT(c->so.error != NULL);
-	connection_event_del(c);
-	connection_timer_del(c);
-	c->so.error->handler = connection_close_handler;
-	event_add(c->cycle,c->so.error);
-}
-
 //slave
 
 typedef void (*safe_event_handle_pt)(cycle_t * cycle,event_t *ev);

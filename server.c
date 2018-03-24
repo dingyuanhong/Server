@@ -1,5 +1,6 @@
 #include "Module/module.h"
 #include "Module/slave.h"
+#include "Function/connection_close.h"
 #include "Function/echo.h"
 #include <signal.h>
 
@@ -38,15 +39,7 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_cycle_del(c);
-	if(ret == 0)
-	{
-		connection_close(c);
-		// LOGD("error close.\n");
-	}else
-	{
-		LOGE("error close failed %d errno:%d\n",ret,errno);
-	}
+	connection_remove(c);
 	return 0;
 }
 
@@ -70,7 +63,6 @@ int accept_event_handler(event_t *ev)
 		count++;
 
 		// socket_nonblocking(afd);
-		// connection_close(createConn(c->cycle,afd));
 		cycle_thread_post(c->cycle,afd);
 	}
 	return count;
@@ -119,7 +111,7 @@ int connection_add_event(event_t *ev)
 	return 0;
 }
 
-void connection_add_event_sub(cycle_t * cycle,event_t *ev)
+void slave_connection_add_event(cycle_t * cycle,event_t *ev)
 {
 	SOCKET fd = (SOCKET)ev->data;
 	connection_t * conn = connection_create(cycle,fd);
@@ -134,9 +126,9 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 		event_add(cycle,event_create(connection_add_event,connection_create(cycle,fd)));
 	}else{
 		cycle_slave_t * slave = cycle->data;
-		cycle_t * cycle_sub = slave_next_cycle(slave);
-		ASSERT(cycle_sub != NULL);
-		safe_add_event(cycle_sub,event_create(NULL,(void*)fd),connection_add_event_sub);
+		cycle_t * slave_cycle = slave_next_cycle(slave);
+		ASSERT(slave_cycle != NULL);
+		safe_add_event(slave_cycle,event_create(NULL,(void*)fd),slave_connection_add_event);
 	}
 	return 0;
 }
