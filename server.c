@@ -2,37 +2,9 @@
 #include "Module/slave.h"
 #include "Function/connection_close.h"
 #include "Function/echo.h"
-#include <signal.h>
+#include "Function/signal.h"
 
 #define MAX_FD_COUNT 1024*1024
-static cycle_t * g_signal_master = NULL;
-#ifdef _WIN32
-void signal_init()
-{}
-#else
-static void signal_handle_term(int sig)
-{
-	LOGI("signal exit:%d",sig);
-	cycle_t *cycle = g_signal_master;
-	if(cycle != NULL)
-	{
-		if(cycle->data != NULL)
-		{
-			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
-			slave_stop(slave);
-		}
-		cycle->stop = 1;
-	}
-}
-
-void signal_init(){
-	signal(SIGTERM , signal_handle_term);
-	signal(SIGINT , signal_handle_term);
-	signal(SIGQUIT , signal_handle_term);
-}
-#endif
-
-
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 
@@ -148,9 +120,7 @@ int main(int argc,char* argv[])
 	{
 		cycle->data = slave_create(MAX_FD_COUNT,max_thread_count);
 	}
-
-	g_signal_master = cycle;
-	signal_init();
+	signal_init(cycle);
 
 	event_t *process = event_create(accept_handler,cycle);
 	event_add(cycle,process);

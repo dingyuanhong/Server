@@ -14,7 +14,7 @@ typedef struct cycle_slave_s{
 	ngx_array_t *thread_pool;
 }cycle_slave_t;
 
-static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
+inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 {
 	if(a->nalloc > n){
 		return (u_char *) a->elts + a->size * n;
@@ -67,6 +67,24 @@ void slave_stop(cycle_slave_t*slave)
 		if(cycle_ptr != NULL)
 		{
 			(*cycle_ptr)->stop = 1;
+		}
+	}
+}
+
+void slave_wait_stop(cycle_slave_t*slave)
+{
+	ASSERT(slave != NULL);
+	for(int i = 0 ; i < slave->max_cycle_count;i++)
+	{
+		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
+		if(cycle_ptr != NULL)
+		{
+			(*cycle_ptr)->stop = 1;
+		}
+		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
+		if(thread_id != NULL && *thread_id != 0)
+		{
+			uv_thread_join(thread_id);
 		}
 	}
 }

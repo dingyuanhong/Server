@@ -6,6 +6,7 @@
 
 
 #include "ngx_times.h"
+#include "../Core/ngx_string.h"
 
 #define ngx_gettimeofday(A) gettimeofday(A,NULL)
 

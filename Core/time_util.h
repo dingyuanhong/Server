@@ -1,8 +1,10 @@
 #ifndef TIMEUTIL_H
 #define TIMEUTIL_H
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <errno.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -90,12 +92,10 @@ inline int usleep(int microsecond){
 
 #else
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
 #include <sys/time.h>
-#include <errno.h>
+#include "log.h"
+
 //纳秒
 static inline uint64_t time_nanosecond(){
 	struct timespec ts;
