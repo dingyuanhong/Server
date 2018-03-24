@@ -33,6 +33,17 @@ void signal_init(){
 #endif
 
 
+static int connection_remove(connection_t * c)
+{
+	int ret = connection_cycle_del(c);
+	if(ret == 0){
+		connection_close(c);
+	}else{
+		LOGD("recv %d errno:%d\n",ret,errno);
+	}
+	return ret;
+}
+
 int read_event_handler(event_t *ev)
 {
 	char byte[65536];
@@ -52,12 +63,8 @@ int read_event_handler(event_t *ev)
 		}
 		else if(ret == 0)
 		{
-			ret = connection_event_del(c);
-			if(ret == 0){
-				connection_close(c);
-			}else{
-				LOGD("recv %d errno:%d\n",ret,errno);
-			}
+			connection_remove(c);
+
 			break;
 		}else if(ret == -1)
 		{
@@ -66,12 +73,7 @@ int read_event_handler(event_t *ev)
 				LOGD("recv again.\n");
 				break;
 			}
-			ret = connection_event_del(c);
-			if(ret == 0){
-				connection_close(c);
-			}else{
-				LOGD("recv %d errno:%d\n",ret,errno);
-			}
+			connection_remove(c);
 			break;
 		}
 	}
@@ -81,15 +83,7 @@ int read_event_handler(event_t *ev)
 int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_event_del(c);
-	if(ret == 0)
-	{
-		connection_close(c);
-		LOGD("error close.\n");
-	}else
-	{
-		LOGE("error close failed %d errno:%d\n",ret,errno);
-	}
+	connection_remove(c);
 	return 0;
 }
 
@@ -98,7 +92,7 @@ int cycle_handler(event_t *ev)
 	cycle_t *cycle = (cycle_t*)ev->data;
 	SOCKET fd = socket_connect("tcp","10.0.2.6:888",1);
 	if(fd == -1){
-		add_event(cycle,ev);
+		event_add(cycle,ev);
 		return -1;
 	}
 	LOGD("socket connect %d\n",fd);
@@ -106,11 +100,11 @@ int cycle_handler(event_t *ev)
 	conn->so.read = event_create(read_event_handler,conn);
 	conn->so.write = event_create(echo_write_event_handler,conn);
 	conn->so.error = event_create(error_event_handler,conn);
-	int ret = connection_event_add_(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
+	int ret = connection_cycle_add_(conn,NGX_READ_EVENT|NGX_WRITE_EVENT,0);
 	ASSERT(ret == 0);
-	add_timer(cycle,conn->so.write,500);
+	timer_add(cycle,conn->so.write,500);
 
-	add_event(cycle,ev);
+	event_add(cycle,ev);
 	return 0;
 }
 
@@ -128,7 +122,7 @@ int main(int argc,char* argv[])
 	signal_init();
 
 	event_t *process = event_create(cycle_handler,cycle);
-	add_event(cycle,process);
+	event_add(cycle,process);
 	cicle_process_master(cycle);
 	event_destroy(&process);
 	cycle_destroy(&cycle);

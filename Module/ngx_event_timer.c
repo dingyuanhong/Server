@@ -1,5 +1,4 @@
 #include "ngx_event_timer.h"
-#include <stddef.h>
 #ifndef ngx_abs
 #include <stdlib.h>
 #define ngx_abs abs

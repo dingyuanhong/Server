@@ -38,7 +38,7 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_event_del(c);
+	int ret = connection_cycle_del(c);
 	if(ret == 0)
 	{
 		connection_close(c);
@@ -96,7 +96,7 @@ int accept_handler(event_t *ev)
 	conn->so.read = event_create(accept_event_handler,conn);
 	conn->so.write = NULL;
 	conn->so.error = event_create(error_event_handler,conn);
-	ret = connection_event_add(conn);
+	ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return 0;
 }
@@ -107,7 +107,7 @@ void accept_connection(connection_t *conn)
 	conn->so.read = event_create(echo_read_event_handler,conn);
 	conn->so.write = NULL;
 	conn->so.error = event_create(error_event_handler,conn);
-	int ret = connection_event_add(conn);
+	int ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
@@ -131,7 +131,7 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 {
 	if(cycle->data == NULL)
 	{
-		add_event(cycle,event_create(connection_add_event,connection_create(cycle,fd)));
+		event_add(cycle,event_create(connection_add_event,connection_create(cycle,fd)));
 	}else{
 		cycle_slave_t * slave = cycle->data;
 		cycle_t * cycle_sub = slave_next_cycle(slave);
@@ -155,17 +155,13 @@ int main(int argc,char* argv[])
 	if(max_thread_count > 0)
 	{
 		cycle->data = slave_create(MAX_FD_COUNT,max_thread_count);
-
-		cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
-		slave_destroy(&slave);
-		cycle->data = NULL;
 	}
 
 	g_signal_master = cycle;
 	signal_init();
 
 	event_t *process = event_create(accept_handler,cycle);
-	add_event(cycle,process);
+	event_add(cycle,process);
 	cicle_process_master(cycle);
 	event_destroy(&process);
 	if(cycle->data != NULL)

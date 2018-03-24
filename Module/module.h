@@ -7,7 +7,7 @@
 #include "ngx_event_timer.h"
 #include "ngx_event_posted.h"
 
-inline int connection_event_add_(connection_t *conn,int event,int flags)
+inline int connection_cycle_add_(connection_t *conn,int event,int flags)
 {
 	int ret =  action_add(conn->cycle->core,&conn->so,event,flags);
 	if(ret == 0)
@@ -17,7 +17,7 @@ inline int connection_event_add_(connection_t *conn,int event,int flags)
 	return ret;
 }
 
-inline int connection_event_add(connection_t *conn)
+inline int connection_cycle_add(connection_t *conn)
 {
 	int ret =  action_add(conn->cycle->core,&conn->so,NGX_READ_EVENT,0);
 	if(ret == 0)
@@ -27,7 +27,7 @@ inline int connection_event_add(connection_t *conn)
 	return ret;
 }
 
-inline int connection_event_del(connection_t *conn)
+inline int connection_cycle_del(connection_t *conn)
 {
 	int ret = action_del(conn->cycle->core,&conn->so);
 	if(ret == 0)
@@ -38,18 +38,19 @@ inline int connection_event_del(connection_t *conn)
 }
 
 
+#define event_add(cycle,ev) ASSERT(ev != NULL);ngx_post_event(ev,&cycle->posted)
+#define event_del(cycle,ev) if(ev != NULL){ngx_delete_posted_event(ev);}
+#define connection_event_del(conn) event_del(conn->cycle,conn->so.read); \
+							event_del(conn->cycle,conn->so.write); \
+							event_del(conn->cycle,conn->so.error);
 
-#define add_event(cycle,ev) ASSERT(ev != NULL);ngx_post_event(ev,&cycle->posted)
-#define del_event(cycle,ev) if(ev != NULL){ngx_delete_posted_event(ev);}
-#define del_connection_event(conn) del_event(conn->cycle,conn->so.read); \
-							del_event(conn->cycle,conn->so.write); \
-							del_event(conn->cycle,conn->so.error);
+#define timer_add(cycle,ev,time) ASSERT(ev!=NULL);ngx_event_add_timer(&cycle->timeout,ev,time)
+#define timer_del(cycle,ev) if(ev != NULL){ngx_event_del_timer(&cycle->timeout,ev);}
+#define connection_timer_del(conn) timer_del(conn->cycle,conn->so.read); \
+							timer_del(conn->cycle,conn->so.write); \
+							timer_del(conn->cycle,conn->so.error);
 
-#define add_timer(cycle,ev,time) ASSERT(ev!=NULL);ngx_event_add_timer(&cycle->timeout,ev,time)
-#define del_timer(cycle,ev) if(ev != NULL){ngx_event_del_timer(&cycle->timeout,ev);}
-#define del_connection_timer(conn) del_timer(conn->cycle,conn->so.read); \
-							del_timer(conn->cycle,conn->so.write); \
-							del_timer(conn->cycle,conn->so.error);
+
 
 #define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
@@ -72,7 +73,7 @@ static inline int connection_close_handler(event_t *ev)
 		connection_destroy(&c);
 	}else{
 		LOGD("connection closing:%d\n",c->so.handle);
-		add_event(c->cycle,ev);
+		event_add(c->cycle,ev);
 	}
 	return 0;
 }
@@ -80,10 +81,10 @@ static inline int connection_close_handler(event_t *ev)
 inline void connection_close(connection_t *c){
 	ASSERT(c != NULL);
 	ASSERT(c->so.error != NULL);
-	del_connection_event(c);
-	del_connection_timer(c);
+	connection_event_del(c);
+	connection_timer_del(c);
 	c->so.error->handler = connection_close_handler;
-	add_event(c->cycle,c->so.error);
+	event_add(c->cycle,c->so.error);
 }
 
 //slave

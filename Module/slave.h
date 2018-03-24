@@ -23,7 +23,7 @@ static inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 }
 
 inline cycle_slave_t *slave_create(int concurrent,int thread_count){
-	cycle_slave_t * slave = (cycle_slave_t*)MALLOC(sizeof(cycle_slave_t*));
+	cycle_slave_t * slave = (cycle_slave_t*)MALLOC(sizeof(cycle_slave_t));
 	slave->concurrent = concurrent;
 	slave->max_cycle_count = thread_count;
 	slave->cycle_pool_index = 0;

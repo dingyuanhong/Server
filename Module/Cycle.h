@@ -45,8 +45,8 @@ inline void cycle_destroy(cycle_t ** cycle_ptr)
 			cycle->stop = 1;
 			action_done(cycle->core);
 			FREE(cycle);
+			*cycle_ptr = NULL;
 		}
-		*cycle_ptr = NULL;
 	}
 }
 

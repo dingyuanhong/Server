@@ -6,6 +6,17 @@
 #include <sys/socket.h>
 #endif
 
+static int connection_remove(connection_t * c)
+{
+	int  r = connection_cycle_del(c);
+	if(r == 0){
+		event_add(c->cycle,c->so.error);
+	}else{
+		LOGD("recv %d errno:%d\n",r,errno);
+	}
+	return r;
+}
+
 int echo_buffer(connection_t * c,char * byte,size_t size){
 	while(1){
 		int ret = send(c->so.handle,byte,size,0);
@@ -42,12 +53,7 @@ int echo_read_event_handler(event_t *ev)
 			int r = echo_buffer(c,byte,ret);
 			if(r == -1)
 			{
-				r = connection_event_del(c);
-				if(r == 0){
-					add_event(c->cycle,c->so.error);
-				}else{
-					LOGD("recv %d errno:%d\n",r,errno);
-				}
+				connection_remove(c);
 				break;
 			}
 		}
@@ -61,12 +67,7 @@ int echo_read_event_handler(event_t *ev)
 		}
 		else if(ret == 0)
 		{
-			ret = connection_event_del(c);
-			if(ret == 0){
-				add_event(c->cycle,c->so.error);
-			}else{
-				LOGD("recv %d errno:%d\n",ret,errno);
-			}
+			connection_remove(c);
 			break;
 		}else if(ret == -1)
 		{
@@ -75,12 +76,7 @@ int echo_read_event_handler(event_t *ev)
 				LOGD("recv again.\n");
 				break;
 			}
-			ret = connection_event_del(c);
-			if(ret == 0){
-				add_event(c->cycle,c->so.error);
-			}else{
-				LOGD("recv %d errno:%d\n",ret,errno);
-			}
+			connection_remove(c);
 			break;
 		}
 	}
@@ -95,12 +91,7 @@ int echo_write_event_handler(event_t *ev)
 	int ret = echo_buffer(c,buf,len);
 	if(ret == -1)
 	{
-		ret = connection_event_del(c);
-		if(ret == 0){
-			add_event(c->cycle,c->so.error);
-		}else{
-			LOGD("recv %d errno:%d\n",ret,errno);
-		}
+		connection_remove(c);
 	}
 	return ret;
 }
