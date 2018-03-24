@@ -1,4 +1,3 @@
-#include "../Core/Core.h"
 #include "KqueueModule.h"
 
 #if (NGX_HAVE_KQUEUE)

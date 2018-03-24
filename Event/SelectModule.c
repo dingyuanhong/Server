@@ -1,4 +1,3 @@
-#include "../Core/Core.h"
 #include "SelectModule.h"
 
 #if (NGX_HAVE_SELECT)

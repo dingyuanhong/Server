@@ -1,7 +1,7 @@
 #ifndef EVENT_CORE_H
 #define EVENT_CORE_H
 
-#include "../Core/Core.h"
+#include "../Core/core.h"
 
 typedef struct event_s event_t;
 
@@ -25,9 +25,7 @@ typedef struct event_s{
 #define EVENT_INVALID_INDEX  0xFFFFFFFF
 
 
-#include "../Core/Core.h"
-
-inline void initEvent(event_t *event,event_handler_pt handler,void* data)
+inline void event_init(event_t *event,event_handler_pt handler,void* data)
 {
 	memset(event,0,sizeof(event_t));
 	event->data = data;
@@ -43,14 +41,14 @@ inline void initEvent(event_t *event,event_handler_pt handler,void* data)
 	// event->cancelable = 0;
 }
 
-inline event_t * createEvent(event_handler_pt handler,void* data)
+inline event_t * event_create(event_handler_pt handler,void* data)
 {
 	event_t * event = MALLOC(sizeof(event_t));
-	initEvent(event,handler,data);
+	event_init(event,handler,data);
 	return event;
 }
 
-inline void deleteEvent(event_t** event){
+inline void event_destroy(event_t** event){
 	if(event != NULL)
 	{
 		if(*event != NULL)

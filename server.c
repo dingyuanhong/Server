@@ -1,5 +1,3 @@
-#include "Core/Core.h"
-#include "Event/EventActions.h"
 #include "Module/module.h"
 #include "Module/slave.h"
 #include "Function/echo.h"
@@ -8,10 +6,10 @@
 #define MAX_FD_COUNT 1024*1024
 static cycle_t * g_signal_master = NULL;
 #ifdef _WIN32
-void processSignal()
+void signal_init()
 {}
 #else
-static void handle_signal_term(int sig)
+static void signal_handle_term(int sig)
 {
 	LOGI("signal exit:%d",sig);
 	cycle_t *cycle = g_signal_master;
@@ -20,52 +18,27 @@ static void handle_signal_term(int sig)
 		if(cycle->data != NULL)
 		{
 			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
-			stop_slave(slave);
+			slave_stop(slave);
 		}
 		cycle->stop = 1;
 	}
 }
 
-void processSignal(){
-	signal(SIGTERM , handle_signal_term);
-	signal(SIGINT , handle_signal_term);
-	signal(SIGQUIT , handle_signal_term);
+void signal_init(){
+	signal(SIGTERM , signal_handle_term);
+	signal(SIGINT , signal_handle_term);
+	signal(SIGQUIT , signal_handle_term);
 }
 #endif
 
+
+
 int cycle_thread_post(cycle_t *cycle,SOCKET fd);
-
-int connection_close_handler(event_t *ev)
-{
-	connection_t *c = (connection_t*)ev->data;
-	int ret = 0;
-	ret = socket_linger(c->so.handle,1,0);//直接关闭SOCKET，避免TIME_WAIT
-	ABORTIF(ret != 0,"socket_linger %d\n",ret);
-	// ret = shutdown(c->so.handle,SHUT_WR);
-	// ABORTIF(ret != 0,"shutodwn %d\n",ret);
-	ret = close(c->so.handle);
-	if(ret == 0)
-	{
-		LOGD("connection closed:%d\n",c->so.handle);
-		deleteConn(&c);
-		deleteEvent(&ev);
-	}else{
-		LOGD("connection closing:%d\n",c->so.handle);
-		add_event(c->cycle,ev);
-	}
-	return 0;
-}
-
-void connection_close(connection_t *c)
-{
-	event_t * timer = createEvent(connection_close_handler,c);
-	add_event(c->cycle,timer);
-}
 
 int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = del_connection(c);
+	int ret = connection_event_del(c);
 	if(ret == 0)
 	{
 		connection_close(c);
@@ -119,11 +92,11 @@ int accept_handler(event_t *ev)
 	}
 
 	socket_nonblocking(fd);
-	connection_t *conn = createConn(cycle,fd);
-	conn->so.read = createEvent(accept_event_handler,conn);
+	connection_t *conn = connection_create(cycle,fd);
+	conn->so.read = event_create(accept_event_handler,conn);
 	conn->so.write = NULL;
-	conn->so.error = createEvent(error_event_handler,conn);
-	ret = add_connection(conn);
+	conn->so.error = event_create(error_event_handler,conn);
+	ret = connection_event_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return 0;
 }
@@ -131,10 +104,10 @@ int accept_handler(event_t *ev)
 void accept_connection(connection_t *conn)
 {
 	ASSERT(conn != NULL);
-	conn->so.read = createEvent(echo_read_event_handler,conn);
+	conn->so.read = event_create(echo_read_event_handler,conn);
 	conn->so.write = NULL;
-	conn->so.error = createEvent(error_event_handler,conn);
-	int ret = add_connection(conn);
+	conn->so.error = event_create(error_event_handler,conn);
+	int ret = connection_event_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
@@ -142,28 +115,28 @@ int connection_add_event(event_t *ev)
 {
 	connection_t * conn = (connection_t*)ev->data;
 	accept_connection(conn);
-	deleteEvent(&ev);
+	event_destroy(&ev);
 	return 0;
 }
 
 void connection_add_event_sub(cycle_t * cycle,event_t *ev)
 {
 	SOCKET fd = (SOCKET)ev->data;
-	connection_t * conn = createConn(cycle,fd);
+	connection_t * conn = connection_create(cycle,fd);
 	accept_connection(conn);
-	deleteEvent(&ev);
+	event_destroy(&ev);
 }
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 {
 	if(cycle->data == NULL)
 	{
-		add_event(cycle,createEvent(connection_add_event,createConn(cycle,fd)));
+		add_event(cycle,event_create(connection_add_event,connection_create(cycle,fd)));
 	}else{
 		cycle_slave_t * slave = cycle->data;
-		cycle_t * cycle_sub = cycle_slave_next(slave);
+		cycle_t * cycle_sub = slave_next_cycle(slave);
 		ASSERT(cycle_sub != NULL);
-		safe_add_event(cycle_sub,createEvent(NULL,(void*)fd),connection_add_event_sub);
+		safe_add_event(cycle_sub,event_create(NULL,(void*)fd),connection_add_event_sub);
 	}
 	return 0;
 }
@@ -174,29 +147,33 @@ int main(int argc,char* argv[])
 	socket_init();
 	ngx_time_init();
 
-	cycle_t *cycle = createCycle(MAX_FD_COUNT);
+	cycle_t *cycle = cycle_create(MAX_FD_COUNT);
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
 
 	int max_thread_count = (ngx_ncpu - 1)*2;
 	if(max_thread_count > 0)
 	{
-		cycle->data = create_slave(MAX_FD_COUNT,max_thread_count);
+		cycle->data = slave_create(MAX_FD_COUNT,max_thread_count);
+
+		cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
+		slave_destroy(&slave);
+		cycle->data = NULL;
 	}
 
 	g_signal_master = cycle;
-	processSignal();
+	signal_init();
 
-	event_t *process = createEvent(accept_handler,cycle);
+	event_t *process = event_create(accept_handler,cycle);
 	add_event(cycle,process);
 	cicle_process_master(cycle);
-	deleteEvent(&process);
+	event_destroy(&process);
 	if(cycle->data != NULL)
 	{
 		cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
-		delete_slave(&slave);
+		slave_destroy(&slave);
 		cycle->data = NULL;
 	}
-	deleteCycle(&cycle);
+	cycle_destroy(&cycle);
 	return 0;
 }

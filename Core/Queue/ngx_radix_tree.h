@@ -8,7 +8,7 @@
 #ifndef _NGX_RADIX_TREE_H_INCLUDED_
 #define _NGX_RADIX_TREE_H_INCLUDED_
 
-#include "../Core.h"
+#include "../ngx_type.h"
 
 #define RADUX_TREE_COUNT 20
 

@@ -5,7 +5,7 @@
  */
 
 
-#include "../Core.h"
+#include "../ngx_type.h"
 
 
 #ifndef _NGX_QUEUE_H_INCLUDED_

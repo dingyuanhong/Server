@@ -34,7 +34,7 @@
 #endif
 
 #include <stdint.h>
-#include "type.h"
+#include "ngx_type.h"
 
 extern ngx_int_t   ngx_ncpu;
 

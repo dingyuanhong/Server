@@ -16,12 +16,12 @@
 #endif
 
 #include "log.h"
-#include "MemoryUtil.h"
-#include "type.h"
+#include "memory_util.h"
 
 #include "os_util.h"
 #include "time_util.h"
 #include "socket_util.h"
+#include "type.h"
 #include "Lock/atomic.h"
 
 #include "Queue/ngx_array.h"

@@ -8,8 +8,7 @@
 #ifndef _NGX_STRING_H_INCLUDED_
 #define _NGX_STRING_H_INCLUDED_
 
-//#include "Core.h"
-#include "type.h"
+#include "ngx_type.h"
 
 #define ngx_tolower(c)      (u_char) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
 #define ngx_toupper(c)      (u_char) ((c >= 'a' && c <= 'z') ? (c & ~0x20) : c)

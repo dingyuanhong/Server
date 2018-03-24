@@ -1,4 +1,3 @@
-#include "../Core/Core.h"
 #include "../Module/module.h"
 #include "echo.h"
 
@@ -43,7 +42,7 @@ int echo_read_event_handler(event_t *ev)
 			int r = echo_buffer(c,byte,ret);
 			if(r == -1)
 			{
-				r = del_connection(c);
+				r = connection_event_del(c);
 				if(r == 0){
 					add_event(c->cycle,c->so.error);
 				}else{
@@ -62,7 +61,7 @@ int echo_read_event_handler(event_t *ev)
 		}
 		else if(ret == 0)
 		{
-			ret = del_connection(c);
+			ret = connection_event_del(c);
 			if(ret == 0){
 				add_event(c->cycle,c->so.error);
 			}else{
@@ -76,7 +75,7 @@ int echo_read_event_handler(event_t *ev)
 				LOGD("recv again.\n");
 				break;
 			}
-			ret = del_connection(c);
+			ret = connection_event_del(c);
 			if(ret == 0){
 				add_event(c->cycle,c->so.error);
 			}else{
@@ -96,7 +95,7 @@ int echo_write_event_handler(event_t *ev)
 	int ret = echo_buffer(c,buf,len);
 	if(ret == -1)
 	{
-		ret = del_connection(c);
+		ret = connection_event_del(c);
 		if(ret == 0){
 			add_event(c->cycle,c->so.error);
 		}else{

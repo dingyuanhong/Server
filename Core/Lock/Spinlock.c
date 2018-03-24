@@ -5,6 +5,8 @@
  */
 
 #include "atomic.h"
+#include "../os_util.h"
+#include "../type.h"
 
 void
 ngx_spinlock(ngx_atomic_t *lock, ngx_atomic_int_t value, ngx_uint_t spin)

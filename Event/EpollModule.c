@@ -1,4 +1,3 @@
-#include "../Core/Core.h"
 #include "EpollModule.h"
 
 #if (NGX_HAVE_EPOLL)

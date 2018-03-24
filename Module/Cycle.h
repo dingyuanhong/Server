@@ -1,7 +1,6 @@
 #ifndef CYCLE_H
 #define CYCLE_H
 
-#include "../Core/Core.h"
 #include "../Event/EventActions.h"
 #include "ngx_event_timer.h"
 
@@ -20,7 +19,7 @@ typedef struct cycle_s{
 	ngx_atomic_t accept_posted_index;
 }cycle_t;
 
-inline cycle_t * createCycle(int concurrent)
+inline cycle_t * cycle_create(int concurrent)
 {
 	cycle_t * cycle = MALLOC(sizeof(cycle_t));
 	cycle->data = NULL;
@@ -36,7 +35,7 @@ inline cycle_t * createCycle(int concurrent)
 	return cycle;
 }
 
-inline void deleteCycle(cycle_t ** cycle_ptr)
+inline void cycle_destroy(cycle_t ** cycle_ptr)
 {
 	if(cycle_ptr != NULL)
 	{

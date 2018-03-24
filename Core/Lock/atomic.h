@@ -9,7 +9,7 @@
 #define _NGX_ATOMIC_H_INCLUDED_
 
 #include <stdint.h>
-#include "../Core.h"
+#include "../ngx_type.h"
 
 #if (NGX_HAVE_LIBATOMIC)
 

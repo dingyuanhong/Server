@@ -2,7 +2,6 @@
 #define EVENTTIMER_H
 
 #include "ngx_times.h"
-#include "../Core/Core.h"
 #include "../Event/Event.h"
 
 #define NGX_TIMER_INFINITE  (ngx_msec_t) -1

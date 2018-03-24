@@ -8,7 +8,7 @@
 #ifndef _NGX_LIST_H_INCLUDED_
 #define _NGX_LIST_H_INCLUDED_
 
-#include "../Core.h"
+#include "../ngx_type.h"
 
 typedef struct ngx_list_part_s  ngx_list_part_t;
 

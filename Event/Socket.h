@@ -1,7 +1,6 @@
 #ifndef OBJECT_CORE_H
 #define OBJECT_CORE_H
 
-#include "../Core/Core.h"
 #include "Event.h"
 
 typedef struct socket_s{

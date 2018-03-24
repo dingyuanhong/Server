@@ -1,4 +1,5 @@
-#include "Core.h"
+#include "os_util.h"
+#include "log.h"
 #include <errno.h>
 #ifdef _WIN32
 #include <windows.h>

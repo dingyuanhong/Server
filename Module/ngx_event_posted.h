@@ -8,7 +8,7 @@
 #ifndef _NGX_EVENT_POSTED_H_INCLUDED_
 #define _NGX_EVENT_POSTED_H_INCLUDED_
 
-#include "../Core/Core.h"
+#include "../Core/core.h"
 #include "../Event/Event.h"
 
 #define ngx_post_event(ev, q)                                                 \

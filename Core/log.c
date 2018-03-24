@@ -1,4 +1,3 @@
-#include "Core.h"
 #include "log.h"
 
 const char * getLevelString(int level)

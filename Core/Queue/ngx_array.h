@@ -8,7 +8,7 @@
 #ifndef _NGX_ARRAY_H_INCLUDED_
 #define _NGX_ARRAY_H_INCLUDED_
 
-#include "../Core.h"
+#include "../ngx_type.h"
 
 typedef struct {
     void        *elts;

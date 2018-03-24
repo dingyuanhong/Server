@@ -9,7 +9,9 @@
 #define _NGX_TIMES_H_INCLUDED_
 
 
-#include "../Core/Core.h"
+#include "../Core/ngx_type.h"
+#include "../Core/Lock/atomic.h"
+#include "../Core/time_util.h"
 
 typedef struct {
     time_t      sec;
