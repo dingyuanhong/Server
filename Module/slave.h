@@ -38,17 +38,17 @@ inline void slave_destroy(cycle_slave_t**slave_ptr){
 	ASSERT(slave != NULL);
 	for(int i = 0 ; i < slave->max_cycle_count;i++)
 	{
+		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
+		if(cycle_ptr != NULL && *cycle_ptr != NULL)
+		{
+			(*cycle_ptr)->stop = 1;
+		}
 		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
 		if(thread_id != NULL && *thread_id != 0)
 		{
 			uv_thread_join(thread_id);
 		}
-		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
-		if(cycle_ptr != NULL)
-		{
-			cycle_destroy(cycle_ptr);
-		}
-
+		cycle_destroy(cycle_ptr);
 	}
 	ngx_array_destroy(slave->cycle_pool);
 	slave->cycle_pool = NULL;
@@ -64,7 +64,7 @@ void slave_stop(cycle_slave_t*slave)
 	for(int i = 0 ; i < slave->max_cycle_count;i++)
 	{
 		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
-		if(cycle_ptr != NULL)
+		if(cycle_ptr != NULL && *cycle_ptr != NULL)
 		{
 			(*cycle_ptr)->stop = 1;
 		}
@@ -77,7 +77,7 @@ void slave_wait_stop(cycle_slave_t*slave)
 	for(int i = 0 ; i < slave->max_cycle_count;i++)
 	{
 		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
-		if(cycle_ptr != NULL)
+		if(cycle_ptr != NULL && *cycle_ptr != NULL)
 		{
 			(*cycle_ptr)->stop = 1;
 		}
