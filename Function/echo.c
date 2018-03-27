@@ -9,30 +9,28 @@
 
 int buffer_read(connection_t * c,char *byte,size_t len)
 {
-	while(1){
-		int ret = recv(c->so.handle,byte,len,0);
-		if(ret == len)
+	int ret = recv(c->so.handle,byte,len,0);
+	if(ret == len)
+	{
+		return ret;
+	}
+	else if(ret > 0)
+	{
+		return ret;
+	}
+	else if(ret == 0)
+	{
+		connection_remove(c);
+		return -1;
+	}else if(ret == -1)
+	{
+		if(EAGAIN == errno)
 		{
-			return ret;
-		}
-		else if(ret > 0)
-		{
-			return ret;
-		}
-		else if(ret == 0)
-		{
-			connection_remove(c);
 			return 0;
-		}else if(ret == -1)
-		{
-			if(EAGAIN == errno)
-			{
-				continue;
-			}
-			LOGE("recv error:%d errno:%d\n",ret,errno);
-			connection_remove(c);
-			return -1;
 		}
+		LOGE("recv error:%d errno:%d\n",ret,errno);
+		connection_remove(c);
+		return -1;
 	}
 	return 0;
 }
@@ -44,7 +42,8 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 		int ret = send(c->so.handle,byte,len,0);
 		if(ret == len)
 		{
-			return ret;
+			size += ret;
+			break;
 		}else if(ret > 0)
 		{
 			byte += ret;
@@ -54,9 +53,10 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 		}else if(ret == -1){
 			if(errno == EAGAIN)
 			{
-				continue;
+				break;
 			}
 			LOGE("send error:%d errno:%d\n",ret,errno);
+			connection_remove(c);
 			return -1;
 		}else{
 			break;
@@ -67,40 +67,63 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 
 int echo_read_event_handler(event_t *ev)
 {
-	char byte[65536];
-	size_t len = 65536;
 
-	connection_t *c = (connection_t*)ev->data;
-	while(1){
-		int ret = buffer_read(c,byte,len);
+	echo_t * echo = (echo_t*)ev->data;
+	connection_t *c = (connection_t*)echo->c;
+
+	// while(1)
+	{
+		void * buffer = queue_w(&echo->queue);
+		int size = queue_wsize(&echo->queue);
+		if(buffer == NULL || size <= 0) return 1;
+		int ret = buffer_read(c,buffer,size);
 		if(ret <= 0)
 		{
-			break;
+			return 1;
 		}
-		int r = buffer_write(c,byte,ret);
-		if(r == -1)
-		{
-			connection_remove(c);
-			break;
-		}
-		if(ret == len)
-		{
-			continue;
-		}
-		break;
+		queue_wpush(&echo->queue,ret);
 	}
 	return 1;
 }
 
 int echo_write_event_handler(event_t *ev)
 {
-	char buf[1024];
-	int len = 1024;
-	connection_t *c = (connection_t*)ev->data;
-	int ret = buffer_write(c,buf,len);
-	if(ret == -1)
+	echo_t * echo = (echo_t*)ev->data;
+	connection_t *c = (connection_t*)echo->c;
+
+	// while(1)
 	{
-		connection_remove(c);
+		void * buffer = queue_r(&echo->queue);
+		int size = queue_rsize(&echo->queue);
+		if(buffer == NULL || size <= 0) return 1;
+		int ret = buffer_write(c,buffer,size);
+		if(ret <= 0)
+		{
+			return 1;
+		}
+		queue_rpush(&echo->queue,ret);
 	}
-	return ret;
+	return 1;
+}
+
+static int error_event_handler(event_t *ev)
+{
+	connection_t *c = (connection_t*)ev->data;
+	int ret = connection_remove(c);
+	if(ret != 0)
+	{
+		LOGD("connection remove %d errno:%d\n",ret,errno);
+	}
+	return 0;
+}
+
+int echo_error_event_handler(event_t * ev)
+{
+	echo_t * echo = (echo_t*)ev->data;
+	connection_t *c = (connection_t*)echo->c;
+	echo_destroy(&echo);
+	c->so.error->handler = error_event_handler;
+	c->so.error->data = c;
+	event_add(c->cycle,c->so.error);
+	return 0;
 }

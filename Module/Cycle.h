@@ -9,6 +9,8 @@ typedef struct cycle_s{
 	int stop;
 	void * data;
 	int32_t  index;
+
+	ngx_queue_t connection_queue;
 	uint32_t connection_count;
 
 	ngx_rbtree_t timeout;
@@ -26,6 +28,7 @@ inline cycle_t * cycle_create(int concurrent)
 	cycle->stop = 0;
 	cycle->index = -1;
 	cycle->core = action_create(concurrent);
+	ngx_queue_init(&cycle->connection_queue);
 	ngx_event_timer_init(&cycle->timeout);
 	ngx_queue_init(&cycle->posted);
 	ngx_queue_init(&cycle->accept_posted);
@@ -49,7 +52,5 @@ inline void cycle_destroy(cycle_t ** cycle_ptr)
 		}
 	}
 }
-
-
 
 #endif

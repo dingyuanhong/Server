@@ -96,15 +96,21 @@
     <ClInclude Include="..\..\Event\Event.h" />
     <ClInclude Include="..\..\Event\EventActions.h" />
     <ClInclude Include="..\..\Event\KqueueModule.h" />
+    <ClInclude Include="..\..\Event\Object.h" />
     <ClInclude Include="..\..\Event\SelectModule.h" />
     <ClInclude Include="..\..\Event\Socket.h" />
+    <ClInclude Include="..\..\Function\connection_close.h" />
     <ClInclude Include="..\..\Function\echo.h" />
+    <ClInclude Include="..\..\Function\loopqueue.h" />
+    <ClInclude Include="..\..\Function\service.h" />
+    <ClInclude Include="..\..\Function\signal.h" />
     <ClInclude Include="..\..\Module\Connection.h" />
     <ClInclude Include="..\..\Module\Cycle.h" />
     <ClInclude Include="..\..\Module\module.h" />
     <ClInclude Include="..\..\Module\ngx_event_posted.h" />
     <ClInclude Include="..\..\Module\ngx_event_timer.h" />
     <ClInclude Include="..\..\Module\ngx_times.h" />
+    <ClInclude Include="..\..\Module\slave.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Core\Lock\Spinlock.c" />
@@ -124,6 +130,7 @@
     <ClCompile Include="..\..\Event\KqueueModule.c" />
     <ClCompile Include="..\..\Event\SelectModule.c" />
     <ClCompile Include="..\..\Function\echo.c" />
+    <ClCompile Include="..\..\Function\service.c" />
     <ClCompile Include="..\..\Module\ngx_event_timer.c" />
     <ClCompile Include="..\..\Module\ngx_times.c" />
   </ItemGroup>

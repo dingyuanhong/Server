@@ -7,12 +7,24 @@
 #include "ngx_event_timer.h"
 #include "ngx_event_posted.h"
 
+#define cycle_add_connection(conn)                                     		\
+    if (ngx_queue_empty(&conn->queue)) {                                    \
+        ngx_queue_insert_tail(&conn->cycle->connection_queue, &conn->queue);\
+    } else  {                                                               \
+		LOGE("ngx_post_event already posted.\n");							\
+    }
+
+#define cycle_del_connection(conn)                                           \
+    ngx_queue_remove(&conn->queue);											 \
+	ngx_queue_init(&conn->queue);
+
 inline int connection_cycle_add_(connection_t *conn,int event,int flags)
 {
 	int ret =  action_add(conn->cycle->core,&conn->so,event,flags);
 	if(ret == 0)
 	{
 		conn->cycle->connection_count++;
+		cycle_add_connection(conn);
 	}
 	return ret;
 }
@@ -23,6 +35,7 @@ inline int connection_cycle_add(connection_t *conn)
 	if(ret == 0)
 	{
 		conn->cycle->connection_count++;
+		cycle_add_connection(conn);
 	}
 	return ret;
 }
@@ -33,6 +46,7 @@ inline int connection_cycle_del(connection_t *conn)
 	if(ret == 0)
 	{
 		conn->cycle->connection_count--;
+		cycle_del_connection(conn);
 	}
 	return ret;
 }
@@ -104,7 +118,81 @@ inline void safe_process_event(cycle_t *cycle)
 	}
 }
 
-static inline int cicle_process_master(cycle_t * cycle)
+
+typedef int (*connection_remove_pt)(connection_t * c);
+
+inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove)
+{
+	LOGD("cycle_remove_connections ...\n");
+	ngx_queue_t *q;
+	connection_t  *conn;
+	ngx_queue_t *queue_ev = &cycle->connection_queue;
+	while (!ngx_queue_empty(queue_ev)) {
+		q = ngx_queue_head(queue_ev);
+		conn = ngx_queue_data(q, connection_t, queue);
+		cycle_del_connection(conn);
+		remove(conn);
+	}
+	LOGD("cycle_remove_connections .\n");
+}
+
+static inline void connection_close_object(connection_t *c)
+{
+	ASSERT(c != NULL);
+	SOCKET so = c->so.handle;
+	int ret = socket_linger(so,1,0);//直接关闭SOCKET，避免TIME_WAIT
+	ABORTIF(ret != 0,"socket_linger %d\n",ret);
+	// ret = shutdown(so,SHUT_WR);
+	// ABORTIF(ret != 0,"shutodwn %d\n",ret);
+	ret = close(so);
+	if(ret == 0)
+	{
+		LOGD("connection closed:%d\n",so);
+		connection_destroy(&c);
+	}else{
+		LOGD("connection closing:%d\n",so);
+		event_add(c->cycle,c->so.error);
+	}
+}
+
+static inline int connection_close_handler(event_t *ev)
+{
+	connection_t *c = (connection_t*)ev->data;
+	connection_close_object(c);
+	return 0;
+}
+
+inline void connection_close_self(connection_t *c){
+	ASSERT(c != NULL);
+	ASSERT(c->so.error != NULL);
+	cycle_del_connection(c);
+	connection_event_del(c);
+	connection_timer_del(c);
+	c->so.error->handler = connection_close_handler;
+	c->so.error->data = c;
+	event_add(c->cycle,c->so.error);
+}
+
+inline int connection_remove(connection_t * c)
+{
+	int ret = connection_cycle_del(c);
+	if(ret == 0){
+		connection_close_self(c);
+	}else{
+		LOGD("connection remove %d errno:%d\n",ret,errno);
+	}
+	return ret;
+}
+
+inline int connection_remove_default(connection_t * c)
+{
+	ASSERT(c != NULL);
+	ASSERT(c->so.error != NULL);
+	event_add(c->cycle,c->so.error);
+	return 0;
+}
+
+static inline int cycle_process_master(cycle_t * cycle)
 {
 	LOGD("cicle_process begin.\n");
 	while(!cycle->stop){
@@ -136,11 +224,19 @@ static inline int cicle_process_master(cycle_t * cycle)
 			break;
 		}
 	}
+	cycle_remove_connections(cycle,connection_remove_default);
+	while(1){
+		ngx_event_process_posted(&cycle->posted);
+		if(event_is_empty(cycle))
+		{
+			break;
+		}
+	}
 	LOGD("cicle_process end.\n");
 	return 0;
 }
 
-static inline int cicle_process_slave(cycle_t * cycle)
+static inline int cycle_process_slave(cycle_t * cycle)
 {
 	LOGD("cicle_process_loop begin.\n");
 	if(cycle->index != -1)
@@ -168,6 +264,14 @@ static inline int cicle_process_slave(cycle_t * cycle)
 		ngx_event_expire_timers(&cycle->timeout);
 		safe_process_event(cycle);
 		ngx_event_process_posted(&cycle->posted);
+	}
+	cycle_remove_connections(cycle,connection_remove_default);
+	while(1){
+		ngx_event_process_posted(&cycle->posted);
+		if(event_is_empty(cycle))
+		{
+			break;
+		}
 	}
 	LOGD("cicle_process_loop end.\n");
 	return 0;

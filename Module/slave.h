@@ -92,7 +92,7 @@ void slave_wait_stop(cycle_slave_t*slave)
 static inline void slave_thread_cb(void* arg)
 {
 	cycle_t *cycle = (cycle_t*)arg;
-	cicle_process_slave(cycle);
+	cycle_process_slave(cycle);
 }
 
 inline cycle_t * slave_next_cycle(cycle_slave_t *slave)

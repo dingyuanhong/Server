@@ -123,6 +123,24 @@
     <ClInclude Include="..\..\Function\echo.h">
       <Filter>源文件\Function</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Function\connection_close.h">
+      <Filter>源文件\Function</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Function\loopqueue.h">
+      <Filter>源文件\Function</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Function\service.h">
+      <Filter>源文件\Function</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Function\signal.h">
+      <Filter>源文件\Function</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Module\slave.h">
+      <Filter>源文件\Module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Event\Object.h">
+      <Filter>源文件\Event</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Core\Lock\Spinlock.c">
@@ -180,6 +198,9 @@
       <Filter>源文件\Module</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Function\echo.c">
+      <Filter>源文件\Function</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Function\service.c">
       <Filter>源文件\Function</Filter>
     </ClCompile>
   </ItemGroup>

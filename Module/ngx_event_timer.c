@@ -11,7 +11,7 @@ void ngx_event_del_timer(ngx_rbtree_t * timeout,event_t *ev)
 	{
 		return;
 	}
-	
+
     ngx_rbtree_delete(timeout, &ev->timer);
 
 #if (NGX_DEBUG)
@@ -28,6 +28,8 @@ void ngx_event_add_timer(ngx_rbtree_t * timeout,event_t *ev, ngx_msec_t timer)
 {
     ngx_msec_t      key;
     ngx_msec_int_t  diff;
+
+	// ngx_time_update();
 
     key = ngx_current_msec + timer;
 
@@ -83,7 +85,7 @@ void ngx_event_expire_timers(ngx_rbtree_t * timeout)
 	ngx_rbtree_node_t  *node, *root, *sentinel;
 
 	sentinel = timeout->sentinel;
-
+	// LOGD("ngx_event_expire_timers run begin!\n");
 	for ( ;; ) {
 		root = timeout->root;
 		if (root == sentinel) {
@@ -106,6 +108,7 @@ void ngx_event_expire_timers(ngx_rbtree_t * timeout)
 		ev->timedout = 1;
 		ev->handler(ev);
 	}
+	// LOGD("ngx_event_expire_timers run end!\n");
 }
 
 void ngx_event_cancel_timers(ngx_rbtree_t * timeout)

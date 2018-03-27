@@ -12,7 +12,11 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 int error_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	connection_remove(c);
+	int ret = connection_remove(c);
+	if(ret != 0)
+	{
+		LOGD("connection remove %d errno:%d\n",ret,errno);
+	}
 	return 0;
 }
 
@@ -70,8 +74,8 @@ void accept_connection(connection_t *conn)
 {
 	ASSERT(conn != NULL);
 	service_init(conn);
-	if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
-	if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
+	// if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
+	// if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
 	int ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
@@ -125,7 +129,7 @@ int main(int argc,char* argv[])
 
 	event_t *process = event_create(accept_handler,cycle);
 	event_add(cycle,process);
-	cicle_process_master(cycle);
+	cycle_process_slave(cycle);
 	event_destroy(&process);
 	if(cycle->data != NULL)
 	{

@@ -7,7 +7,7 @@
 typedef struct connection_s{
 	socket_t so;
 	cycle_t * cycle;
-	void * data;
+	ngx_queue_t queue;
 }connection_t;
 
 inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
@@ -17,8 +17,8 @@ inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
 	conn->so.read = NULL;
 	conn->so.write = NULL;
 	conn->so.error = NULL;
-	conn->data = NULL;
 	conn->cycle = cycle;
+	ngx_queue_init(&conn->queue);
 	return conn;
 }
 
@@ -26,10 +26,11 @@ inline void connection_destroy(connection_t** conn){
 	if(conn != NULL)
 	{
 		if(*conn != NULL){
-			event_destroy(&(*conn)->so.read);
-			event_destroy(&(*conn)->so.write);
-			event_destroy(&(*conn)->so.error);
-			FREE(*conn);
+			connection_t* c = *conn;
+			event_destroy(&c->so.read);
+			event_destroy(&c->so.write);
+			event_destroy(&c->so.error);
+			FREE(c);
 		}
 		*conn = NULL;
 	}
