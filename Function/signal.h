@@ -13,6 +13,7 @@ static void signal_handle_term(int sig)
 	cycle_t *cycle = (cycle_t*)g_signal_master;
 	if(cycle != NULL)
 	{
+		cycle->stop = 1;
 		if(cycle->data != NULL)
 		{
 			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
@@ -28,5 +29,6 @@ void signal_init(void * data){
 	signal(SIGTERM , signal_handle_term);
 	signal(SIGINT , signal_handle_term);
 	signal(SIGQUIT , signal_handle_term);
+	signal(SIGUSR1 , signal_handle_term);
 }
 #endif

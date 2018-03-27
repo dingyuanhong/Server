@@ -48,6 +48,7 @@ int accept_event_handler(event_t *ev)
 int accept_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
+	event_destroy(&ev);
 	SOCKET fd = socket_bind("tcp","0.0.0.0:888");
 	if(fd == -1){
 		return -1;
@@ -130,7 +131,7 @@ int main(int argc,char* argv[])
 	event_t *process = event_create(accept_handler,cycle);
 	event_add(cycle,process);
 	cycle_process_slave(cycle);
-	event_destroy(&process);
+
 	if(cycle->data != NULL)
 	{
 		cycle_slave_t * slave = (cycle_slave_t*)cycle->data;

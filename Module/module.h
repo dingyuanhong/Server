@@ -194,7 +194,7 @@ inline int connection_remove_default(connection_t * c)
 
 static inline int cycle_process_master(cycle_t * cycle)
 {
-	LOGD("cicle_process begin.\n");
+	LOGD("cycle_process_master begin.\n");
 	while(!cycle->stop){
 		ngx_time_update();
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
@@ -232,13 +232,13 @@ static inline int cycle_process_master(cycle_t * cycle)
 			break;
 		}
 	}
-	LOGD("cicle_process end.\n");
+	LOGD("cycle_process_master end.\n");
 	return 0;
 }
 
 static inline int cycle_process_slave(cycle_t * cycle)
 {
-	LOGD("cicle_process_loop begin.\n");
+	LOGD("cycle_process_slave begin.\n");
 	if(cycle->index != -1)
 	{
 		thread_affinity_cpu(cycle->index);
@@ -273,7 +273,7 @@ static inline int cycle_process_slave(cycle_t * cycle)
 			break;
 		}
 	}
-	LOGD("cicle_process_loop end.\n");
+	LOGD("cycle_process_slave end.\n");
 	return 0;
 }
 

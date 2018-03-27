@@ -1,6 +1,7 @@
 #ifndef SLAVE_H
 #define SLAVE_H
 
+#include "../Core/core.h"
 #include "../Core/thread.h"
 #include "../Event/EventActions.h"
 #include "module.h"
@@ -46,8 +47,9 @@ inline void slave_destroy(cycle_slave_t**slave_ptr){
 		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
 		if(thread_id != NULL && *thread_id != 0)
 		{
-			uv_thread_join(thread_id);
+			ASSERT(uv_thread_join(thread_id) == 0);
 		}
+		LOGD("slave_destroy .%d ..\n",i);
 		cycle_destroy(cycle_ptr);
 	}
 	ngx_array_destroy(slave->cycle_pool);
@@ -84,7 +86,7 @@ void slave_wait_stop(cycle_slave_t*slave)
 		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
 		if(thread_id != NULL && *thread_id != 0)
 		{
-			uv_thread_join(thread_id);
+			ASSERT(uv_thread_join(thread_id) == 0);
 		}
 	}
 }
