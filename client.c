@@ -59,7 +59,7 @@ void cycle_handler(event_t *ev)
 		timer_add(cycle,ev,5000);
 		return;
 	}
-	LOGD("socket connect %d\n",fd);
+	// LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
 	control_init(conn);
 	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,0);
@@ -71,7 +71,7 @@ void cycle_handler(event_t *ev)
 	}else{
 		timer_add(conn->cycle,conn->so.write,1000);
 	}
-	// event_add(cycle,ev);
+	event_add(cycle,ev);
 }
 
 int main(int argc,char* argv[])
