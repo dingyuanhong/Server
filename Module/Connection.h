@@ -10,7 +10,7 @@ typedef struct connection_s{
 	ngx_queue_t queue;
 }connection_t;
 
-inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
+static inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
 {
 	connection_t * conn = MALLOC(sizeof(connection_t));
 	conn->so.handle = s;
@@ -22,7 +22,7 @@ inline connection_t * connection_create(cycle_t * cycle,SOCKET s)
 	return conn;
 }
 
-inline void connection_destroy(connection_t** conn){
+static inline void connection_destroy(connection_t** conn){
 	if(conn != NULL)
 	{
 		if(*conn != NULL){

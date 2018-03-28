@@ -23,7 +23,7 @@ inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 	return NULL;
 }
 
-inline cycle_slave_t *slave_create(int concurrent,int thread_count){
+static inline cycle_slave_t *slave_create(int concurrent,int thread_count){
 	cycle_slave_t * slave = (cycle_slave_t*)MALLOC(sizeof(cycle_slave_t));
 	slave->concurrent = concurrent;
 	slave->max_cycle_count = thread_count;
@@ -33,7 +33,7 @@ inline cycle_slave_t *slave_create(int concurrent,int thread_count){
 	return slave;
 }
 
-inline void slave_destroy(cycle_slave_t**slave_ptr){
+static inline void slave_destroy(cycle_slave_t**slave_ptr){
 	ASSERT(slave_ptr != NULL);
 	cycle_slave_t * slave = *slave_ptr;
 	ASSERT(slave != NULL);

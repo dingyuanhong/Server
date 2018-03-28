@@ -25,7 +25,7 @@ typedef struct event_s{
 #define EVENT_INVALID_INDEX  0xFFFFFFFF
 
 
-inline void event_init(event_t *event,event_handler_pt handler,void* data)
+static inline void event_init(event_t *event,event_handler_pt handler,void* data)
 {
 	memset(event,0,sizeof(event_t));
 	event->data = data;
@@ -41,14 +41,14 @@ inline void event_init(event_t *event,event_handler_pt handler,void* data)
 	// event->cancelable = 0;
 }
 
-inline event_t * event_create(event_handler_pt handler,void* data)
+static inline event_t * event_create(event_handler_pt handler,void* data)
 {
 	event_t * event = MALLOC(sizeof(event_t));
 	event_init(event,handler,data);
 	return event;
 }
 
-inline void event_destroy(event_t** event){
+static inline void event_destroy(event_t** event){
 	if(event != NULL)
 	{
 		if(*event != NULL)

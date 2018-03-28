@@ -21,7 +21,7 @@ typedef struct cycle_s{
 	ngx_atomic_t accept_posted_index;
 }cycle_t;
 
-inline cycle_t * cycle_create(int concurrent)
+static inline cycle_t * cycle_create(int concurrent)
 {
 	cycle_t * cycle = MALLOC(sizeof(cycle_t));
 	cycle->data = NULL;
@@ -38,7 +38,7 @@ inline cycle_t * cycle_create(int concurrent)
 	return cycle;
 }
 
-inline void cycle_destroy(cycle_t ** cycle_ptr)
+static inline void cycle_destroy(cycle_t ** cycle_ptr)
 {
 	if(cycle_ptr != NULL)
 	{
