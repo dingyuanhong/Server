@@ -75,12 +75,11 @@ typedef struct safe_event_s{
 	safe_event_handle_pt handler;
 }safe_event_t;
 
-static inline int safe_event_handler(event_t *ev)
+static inline void safe_event_handler(event_t *ev)
 {
 	safe_event_t * sev = (safe_event_t*)ev->data;
 	sev->handler(sev->cycle,sev->event);
 	FREE(sev);
-	return 0;
 }
 
 static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)
@@ -134,7 +133,7 @@ inline int connection_close_object(connection_t *c)
 	}
 }
 
-static inline int connection_close_handler(event_t *ev)
+static inline void connection_close_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	int ret = connection_close_object(c);
@@ -142,7 +141,6 @@ static inline int connection_close_handler(event_t *ev)
 	{
 		event_add(c->cycle,ev);
 	}
-	return 0;
 }
 
 static inline void connection_close_self(connection_t *c){
@@ -168,10 +166,10 @@ static inline int connection_close(connection_t * c)
 	return ret;
 }
 
-static inline int connection_close_event_handler(event_t *ev)
+static inline void connection_close_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	return connection_close(c);
+	connection_close(c);
 }
 
 //remove connection

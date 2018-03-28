@@ -92,7 +92,7 @@ void echo_destroy(echo_t **echo_ptr)
 	}
 }
 
-int echo_read_event_handler(event_t *ev)
+void echo_read_event_handler(event_t *ev)
 {
 
 	echo_t * echo = (echo_t*)ev->data;
@@ -102,18 +102,17 @@ int echo_read_event_handler(event_t *ev)
 	{
 		void * buffer = queue_w(&echo->queue);
 		int size = queue_wsize(&echo->queue);
-		if(buffer == NULL || size <= 0) return 1;
+		if(buffer == NULL || size <= 0) return;
 		int ret = buffer_read(c,buffer,size);
 		if(ret <= 0)
 		{
-			return 1;
+			return;
 		}
 		queue_wpush(&echo->queue,ret);
 	}
-	return 1;
 }
 
-int echo_write_event_handler(event_t *ev)
+void echo_write_event_handler(event_t *ev)
 {
 	echo_t * echo = (echo_t*)ev->data;
 	connection_t *c = (connection_t*)echo->c;
@@ -122,18 +121,17 @@ int echo_write_event_handler(event_t *ev)
 	{
 		void * buffer = queue_r(&echo->queue);
 		int size = queue_rsize(&echo->queue);
-		if(buffer == NULL || size <= 0) return 1;
+		if(buffer == NULL || size <= 0) return;
 		int ret = buffer_write(c,buffer,size);
 		if(ret <= 0)
 		{
-			return 1;
+			return;
 		}
 		queue_rpush(&echo->queue,ret);
 	}
-	return 1;
 }
 
-int echo_error_event_handler(event_t * ev)
+void echo_error_event_handler(event_t * ev)
 {
 	echo_t * echo = (echo_t*)ev->data;
 	connection_t *c = (connection_t*)echo->c;
@@ -141,7 +139,6 @@ int echo_error_event_handler(event_t * ev)
 	c->so.error->handler = connection_close_event_handler;
 	c->so.error->data = c;
 	event_add(c->cycle,c->so.error);
-	return 0;
 }
 
 void echo_init(connection_t * c)

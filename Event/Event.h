@@ -5,7 +5,7 @@
 
 typedef struct event_s event_t;
 
-typedef int (*event_handler_pt)(event_t *ev);
+typedef void (*event_handler_pt)(event_t *ev);
 
 typedef struct event_s{
 	event_handler_pt  handler;

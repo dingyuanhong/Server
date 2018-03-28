@@ -5,7 +5,7 @@
 #include "Function/service.h"
 
 
-int heartbeat_event_handler(event_t *ev)
+void heartbeat_event_handler(event_t *ev)
 {
 	char byte[65535];
 	int len = 10;
@@ -15,10 +15,9 @@ int heartbeat_event_handler(event_t *ev)
 	{
 		timer_add(c->cycle,c->so.write,1000);
 	}
-	return 0;
 }
 
-int discard_read_event_handler(event_t *ev)
+void discard_read_event_handler(event_t *ev)
 {
 	char byte[65535];
 	int len = 65535;
@@ -36,7 +35,6 @@ int discard_read_event_handler(event_t *ev)
 		}
 		break;
 	}
-	return 0;
 }
 
 void control_init(connection_t * c)
@@ -49,17 +47,17 @@ void control_init(connection_t * c)
 
 #define MAX_FD_COUNT 1024*1024
 
-int cycle_handler(event_t *ev)
+void cycle_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
 	SOCKET fd = socket_connect("tcp","127.0.0.1:888",1);
 	if(fd == -1){
 		if(errno == EADDRNOTAVAIL)
 		{
-			return -1;
+			return ;
 		}
 		timer_add(cycle,ev,5000);
-		return -1;
+		return;
 	}
 	LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
@@ -74,7 +72,6 @@ int cycle_handler(event_t *ev)
 		timer_add(conn->cycle,conn->so.write,1000);
 	}
 	// event_add(cycle,ev);
-	return 0;
 }
 
 int main(int argc,char* argv[])

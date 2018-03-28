@@ -8,7 +8,7 @@
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd);
 
-int accept_event_handler(event_t *ev)
+void accept_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	int count = 0;
@@ -30,23 +30,22 @@ int accept_event_handler(event_t *ev)
 		// socket_nonblocking(afd);
 		cycle_thread_post(c->cycle,afd);
 	}
-	return count;
 }
 
-int accept_handler(event_t *ev)
+void accept_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
 	event_destroy(&ev);
 	SOCKET fd = socket_bind("tcp","0.0.0.0:888");
 	if(fd == -1){
-		return -1;
+		return ;
 	}
 	int ret = listen(fd,MAX_FD_COUNT);
 	if(ret == -1)
 	{
 		LOGE("listen errno:%d\n",errno);
 		close(fd);
-		return -1;
+		return ;
 	}
 
 	socket_nonblocking(fd);
@@ -56,7 +55,6 @@ int accept_handler(event_t *ev)
 	conn->so.error = event_create(connection_close_event_handler,conn);
 	ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
-	return 0;
 }
 
 void accept_connection(connection_t *conn)
@@ -69,12 +67,11 @@ void accept_connection(connection_t *conn)
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
-int connection_add_event(event_t *ev)
+void connection_add_event(event_t *ev)
 {
 	connection_t * conn = (connection_t*)ev->data;
 	accept_connection(conn);
 	event_destroy(&ev);
-	return 0;
 }
 
 void slave_connection_add_event(cycle_t * cycle,event_t *ev)
