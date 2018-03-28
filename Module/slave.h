@@ -40,16 +40,20 @@ inline void slave_destroy(cycle_slave_t**slave_ptr){
 	for(int i = 0 ; i < slave->max_cycle_count;i++)
 	{
 		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
+		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
 		if(cycle_ptr != NULL && *cycle_ptr != NULL)
 		{
-			(*cycle_ptr)->stop = 1;
+			if((*cycle_ptr)->stop != 1)
+			{
+				(*cycle_ptr)->stop = 1;
+
+				if(thread_id != NULL)
+				{
+					ASSERT(uv_thread_join(thread_id) == 0);
+				}
+			}
 		}
-		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
-		if(thread_id != NULL && *thread_id != 0)
-		{
-			ASSERT(uv_thread_join(thread_id) == 0);
-		}
-		LOGD("slave_destroy .%d ..\n",i);
+
 		cycle_destroy(cycle_ptr);
 	}
 	ngx_array_destroy(slave->cycle_pool);
@@ -60,33 +64,21 @@ inline void slave_destroy(cycle_slave_t**slave_ptr){
 	*slave_ptr = NULL;
 }
 
-void slave_stop(cycle_slave_t*slave)
+inline void slave_wait_stop(cycle_slave_t*slave)
 {
 	ASSERT(slave != NULL);
 	for(int i = 0 ; i < slave->max_cycle_count;i++)
 	{
 		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
-		if(cycle_ptr != NULL && *cycle_ptr != NULL)
-		{
-			(*cycle_ptr)->stop = 1;
-		}
-	}
-}
-
-void slave_wait_stop(cycle_slave_t*slave)
-{
-	ASSERT(slave != NULL);
-	for(int i = 0 ; i < slave->max_cycle_count;i++)
-	{
-		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
-		if(cycle_ptr != NULL && *cycle_ptr != NULL)
-		{
-			(*cycle_ptr)->stop = 1;
-		}
 		uv_thread_t * thread_id = (uv_thread_t*)ngx_array_get(slave->thread_pool,i);
-		if(thread_id != NULL && *thread_id != 0)
+
+		if(cycle_ptr != NULL && *cycle_ptr != NULL && thread_id != NULL)
 		{
-			ASSERT(uv_thread_join(thread_id) == 0);
+			if((*cycle_ptr)->stop != 1)
+			{
+				(*cycle_ptr)->stop = 1;
+				ASSERT(uv_thread_join(thread_id) == 0);
+			}
 		}
 	}
 }
@@ -97,7 +89,7 @@ static inline void slave_thread_cb(void* arg)
 	cycle_process_slave(cycle);
 }
 
-inline cycle_t * slave_next_cycle(cycle_slave_t *slave)
+static inline cycle_t * slave_next_cycle(cycle_slave_t *slave)
 {
 	int index = slave->cycle_pool_index%slave->max_cycle_count;
 	cycle_t ** cycle_ptr = (cycle_t**)ngx_array_get(slave->cycle_pool,index);

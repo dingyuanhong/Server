@@ -1,6 +1,5 @@
 #include "Module/module.h"
 #include "Module/slave.h"
-#include "Function/connection_close.h"
 #include "Function/echo.h"
 #include "Function/signal.h"
 #include "Function/service.h"
@@ -45,19 +44,10 @@ void control_init(connection_t * c)
 	ASSERT(c != NULL);
 	c->so.write = event_create(heartbeat_event_handler,c);
 	c->so.read = event_create(discard_read_event_handler,c);
+	c->so.error = event_create(connection_close_event_handler,c);
 }
 
 #define MAX_FD_COUNT 1024*1024
-
-static int error_event_handler(event_t *ev)
-{
-	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_remove(c);
-	if(ret != 0){
-		LOGD("connection remove %d errno:%d\n",ret,errno);
-	}
-	return 0;
-}
 
 int cycle_handler(event_t *ev)
 {
@@ -74,12 +64,16 @@ int cycle_handler(event_t *ev)
 	LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
 	control_init(conn);
-	if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
-	if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
 	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,0);
 	ASSERT(ret == 0);
-	timer_add(conn->cycle,conn->so.write,1000);
-	event_add(cycle,ev);
+	if(ret != 0)
+	{
+		ret  = connection_close_object(conn);
+		ASSERT(ret == 0);
+	}else{
+		timer_add(conn->cycle,conn->so.write,1000);
+	}
+	// event_add(cycle,ev);
 	return 0;
 }
 

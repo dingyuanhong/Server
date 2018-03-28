@@ -1,6 +1,5 @@
 #include "Module/module.h"
 #include "Module/slave.h"
-#include "Function/connection_close.h"
 #include "Function/echo.h"
 #include "Function/signal.h"
 #include "Function/service.h"
@@ -8,17 +7,6 @@
 #define MAX_FD_COUNT 1024*1024
 
 int cycle_thread_post(cycle_t *cycle,SOCKET fd);
-
-int error_event_handler(event_t *ev)
-{
-	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_remove(c);
-	if(ret != 0)
-	{
-		LOGD("connection remove %d errno:%d\n",ret,errno);
-	}
-	return 0;
-}
 
 int accept_event_handler(event_t *ev)
 {
@@ -65,7 +53,7 @@ int accept_handler(event_t *ev)
 	connection_t *conn = connection_create(cycle,fd);
 	conn->so.read = event_create(accept_event_handler,conn);
 	conn->so.write = NULL;
-	conn->so.error = event_create(error_event_handler,conn);
+	conn->so.error = event_create(connection_close_event_handler,conn);
 	ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 	return 0;
@@ -75,8 +63,8 @@ void accept_connection(connection_t *conn)
 {
 	ASSERT(conn != NULL);
 	service_init(conn);
-	// if(conn->so.read == NULL) conn->so.read = event_create(error_event_handler,conn);
-	// if(conn->so.error == NULL) conn->so.error = event_create(error_event_handler,conn);
+	// if(conn->so.read == NULL) conn->so.read = event_create(connection_close_event_handler,conn);
+	// if(conn->so.error == NULL) conn->so.error = event_create(connection_close_event_handler,conn);
 	int ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
@@ -130,7 +118,7 @@ int main(int argc,char* argv[])
 
 	event_t *process = event_create(accept_handler,cycle);
 	event_add(cycle,process);
-	cycle_process_slave(cycle);
+	cycle_process_master(cycle);
 
 	if(cycle->data != NULL)
 	{

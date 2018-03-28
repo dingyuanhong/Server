@@ -7,14 +7,14 @@
 #include "ngx_event_timer.h"
 #include "ngx_event_posted.h"
 
-#define cycle_add_connection(conn)                                     		\
+#define connection_cycle_queue_add(conn)                                     		\
     if (ngx_queue_empty(&conn->queue)) {                                    \
         ngx_queue_insert_tail(&conn->cycle->connection_queue, &conn->queue);\
     } else  {                                                               \
 		LOGE("ngx_post_event already posted.\n");							\
     }
 
-#define cycle_del_connection(conn)                                           \
+#define connection_cycle_queue_del(conn)                                           \
     ngx_queue_remove(&conn->queue);											 \
 	ngx_queue_init(&conn->queue);
 
@@ -24,20 +24,14 @@ inline int connection_cycle_add_(connection_t *conn,int event,int flags)
 	if(ret == 0)
 	{
 		conn->cycle->connection_count++;
-		cycle_add_connection(conn);
+		connection_cycle_queue_add(conn);
 	}
 	return ret;
 }
 
 inline int connection_cycle_add(connection_t *conn)
 {
-	int ret =  action_add(conn->cycle->core,&conn->so,NGX_READ_EVENT,0);
-	if(ret == 0)
-	{
-		conn->cycle->connection_count++;
-		cycle_add_connection(conn);
-	}
-	return ret;
+	return connection_cycle_add_(conn,NGX_READ_EVENT,0);
 }
 
 inline int connection_cycle_del(connection_t *conn)
@@ -46,7 +40,7 @@ inline int connection_cycle_del(connection_t *conn)
 	if(ret == 0)
 	{
 		conn->cycle->connection_count--;
-		cycle_del_connection(conn);
+		connection_cycle_queue_del(conn);
 	}
 	return ret;
 }
@@ -70,7 +64,7 @@ inline int connection_cycle_del(connection_t *conn)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
 
 
-//slave
+//slave safe
 
 typedef void (*safe_event_handle_pt)(cycle_t * cycle,event_t *ev);
 
@@ -89,7 +83,7 @@ static inline int safe_event_handler(event_t *ev)
 	return 0;
 }
 
-inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)
+static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_pt handler)
 {
 	safe_event_t * sev = (safe_event_t*)MALLOC(sizeof(safe_event_t));
 	sev->cycle = cycle;
@@ -119,24 +113,9 @@ inline void safe_process_event(cycle_t *cycle)
 }
 
 
-typedef int (*connection_remove_pt)(connection_t * c);
+//close connection
 
-inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove)
-{
-	LOGD("cycle_remove_connections ...\n");
-	ngx_queue_t *q;
-	connection_t  *conn;
-	ngx_queue_t *queue_ev = &cycle->connection_queue;
-	while (!ngx_queue_empty(queue_ev)) {
-		q = ngx_queue_head(queue_ev);
-		conn = ngx_queue_data(q, connection_t, queue);
-		cycle_del_connection(conn);
-		remove(conn);
-	}
-	LOGD("cycle_remove_connections .\n");
-}
-
-static inline void connection_close_object(connection_t *c)
+inline int connection_close_object(connection_t *c)
 {
 	ASSERT(c != NULL);
 	SOCKET so = c->so.handle;
@@ -147,41 +126,69 @@ static inline void connection_close_object(connection_t *c)
 	ret = close(so);
 	if(ret == 0)
 	{
-		LOGD("connection closed:%d\n",so);
 		connection_destroy(&c);
+		return 0;
 	}else{
-		LOGD("connection closing:%d\n",so);
-		event_add(c->cycle,c->so.error);
+		LOGD("connection closing:%d errorno:%d\n",so,errno);
+		return -1;
 	}
 }
 
 static inline int connection_close_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	connection_close_object(c);
+	int ret = connection_close_object(c);
+	if(ret == -1)
+	{
+		event_add(c->cycle,ev);
+	}
 	return 0;
 }
 
-inline void connection_close_self(connection_t *c){
+static inline void connection_close_self(connection_t *c){
 	ASSERT(c != NULL);
-	ASSERT(c->so.error != NULL);
-	cycle_del_connection(c);
+	connection_cycle_queue_del(c);
 	connection_event_del(c);
 	connection_timer_del(c);
+
+	ASSERT(c->so.error != NULL);
 	c->so.error->handler = connection_close_handler;
 	c->so.error->data = c;
 	event_add(c->cycle,c->so.error);
 }
 
-inline int connection_remove(connection_t * c)
+static inline int connection_close(connection_t * c)
 {
 	int ret = connection_cycle_del(c);
 	if(ret == 0){
 		connection_close_self(c);
 	}else{
-		LOGD("connection remove %d errno:%d\n",ret,errno);
+		LOGD("connection close %d errno:%d\n",ret,errno);
 	}
 	return ret;
+}
+
+static inline int connection_close_event_handler(event_t *ev)
+{
+	connection_t *c = (connection_t*)ev->data;
+	return connection_close(c);
+}
+
+//remove connection
+
+typedef int (*connection_remove_pt)(connection_t * c);
+
+inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove)
+{
+	ngx_queue_t *q;
+	connection_t  *conn;
+	ngx_queue_t *queue_ev = &cycle->connection_queue;
+	while (!ngx_queue_empty(queue_ev)) {
+		q = ngx_queue_head(queue_ev);
+		conn = ngx_queue_data(q, connection_t, queue);
+		connection_cycle_queue_del(conn);
+		remove(conn);
+	}
 }
 
 inline int connection_remove_default(connection_t * c)
@@ -238,7 +245,7 @@ static inline int cycle_process_master(cycle_t * cycle)
 
 static inline int cycle_process_slave(cycle_t * cycle)
 {
-	LOGD("cycle_process_slave begin.\n");
+	LOGD("cycle_process_slave begin %d.\n",cycle->index);
 	if(cycle->index != -1)
 	{
 		thread_affinity_cpu(cycle->index);
@@ -273,7 +280,7 @@ static inline int cycle_process_slave(cycle_t * cycle)
 			break;
 		}
 	}
-	LOGD("cycle_process_slave end.\n");
+	LOGD("cycle_process_slave end %d.\n",cycle->index);
 	return 0;
 }
 
