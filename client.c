@@ -46,11 +46,12 @@ void control_init(connection_t * c)
 }
 
 #define MAX_FD_COUNT 1024*1024
+char * url = "127.0.0.1:888";
 
 void cycle_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
-	SOCKET fd = socket_connect("tcp","127.0.0.1:888",1);
+	SOCKET fd = socket_connect("tcp",url,1);
 	if(fd == -1){
 		if(errno == EADDRNOTAVAIL)
 		{
@@ -76,6 +77,10 @@ void cycle_handler(event_t *ev)
 
 int main(int argc,char* argv[])
 {
+	if(argc >= 2)
+	{
+		url = argv[1];
+	}
 	os_init();
 	socket_init();
 	ngx_time_init();
