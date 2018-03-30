@@ -68,4 +68,18 @@ struct sockaddr* socket_addr(int Type,const char * addr);
 SOCKET socket_bind(const char * type,const char * addr);
 SOCKET socket_connect(const char * type,const char * addr,int nonblocking);
 
+#ifdef _WIN32
+#define SOCKET_ERRNO WSAGetLastError()
+
+#define SEADDRNOTAVAIL WSAEADDRNOTAVAIL
+#define SEINPROGRESS WSAEINPROGRESS
+#define SEWOULDBLOCK WSAEWOULDBLOCK
+#else
+#define SOCKET_ERRNO errno
+
+#define SEADDRNOTAVAIL EADDRNOTAVAIL
+#define SEINPROGRESS EINPROGRESS
+#define SEWOULDBLOCK EWOULDBLOCK
+#endif
+
 #endif

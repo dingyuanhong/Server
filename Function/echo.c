@@ -23,11 +23,11 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 		return -1;
 	}else if(ret == -1)
 	{
-		if(EAGAIN == errno)
+		if(SOCKET_ERRNO == SEWOULDBLOCK)
 		{
 			return 0;
 		}
-		LOGE("recv error:%d errno:%d\n",ret,errno);
+		LOGE("recv error:%d errno:%d\n",ret,SOCKET_ERRNO);
 		connection_close(c);
 		return -1;
 	}
@@ -50,11 +50,11 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 			size += ret;
 			continue;
 		}else if(ret == -1){
-			if(errno == EAGAIN)
+			if(SOCKET_ERRNO == SEWOULDBLOCK)
 			{
 				break;
 			}
-			LOGE("send error:%d errno:%d\n",ret,errno);
+			LOGE("send error:%d errno:%d\n",ret,SOCKET_ERRNO);
 			connection_close(c);
 			return -1;
 		}else{
@@ -74,7 +74,7 @@ echo_t *echo_create(connection_t *c)
 {
 	echo_t * echo = (echo_t*)MALLOC(sizeof(echo_t));
 	echo->c = c;
-	queue_init(&echo->queue,10);
+	queue_init(&echo->queue,12);
 	return echo;
 }
 
@@ -108,7 +108,7 @@ void echo_read_event_handler(event_t *ev)
 		{
 			return;
 		}
-		queue_wpush(&echo->queue,ret);
+		// queue_wpush(&echo->queue,ret);
 	}
 }
 
@@ -146,6 +146,6 @@ void echo_init(connection_t * c)
 	ASSERT(c != NULL);
 	echo_t * echo = echo_create(c);
 	c->so.read = event_create(echo_read_event_handler,echo);
-	c->so.read = event_create(echo_write_event_handler,echo);
+	c->so.write = event_create(echo_write_event_handler,echo);
 	c->so.error = event_create(echo_error_event_handler,echo);
 }

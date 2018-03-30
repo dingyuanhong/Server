@@ -346,7 +346,7 @@ int socket_recvtimeout(SOCKET socket, int timeout)
 		free(addr_ptr);
 	}
 	if(ret != 0) {
-		LOGE("bind (%s) errno:%d\n",addr,errno);
+		LOGE("bind (%s) errno:%d\n",addr,SOCKET_ERRNO);
 		close(s);
 		s = -1;
 	}
@@ -371,9 +371,9 @@ int socket_recvtimeout(SOCKET socket, int timeout)
 		free(addr_ptr);
 	}
 	if(ret != 0){
-		if(EINPROGRESS != errno)
+		if(!(SEINPROGRESS == SOCKET_ERRNO || SEWOULDBLOCK == SOCKET_ERRNO))
 		{
-			LOGE("connect (%s) errno:%d\n",addr,errno);
+			LOGE("connect (%s) errno:%d\n",addr,SOCKET_ERRNO);
 			close(s);
 			s = -1;
 		}

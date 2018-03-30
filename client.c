@@ -47,18 +47,35 @@ void control_init(connection_t * c)
 
 #define MAX_FD_COUNT 1024*1024
 char * url = "127.0.0.1:888";
+int blocking = 0;
+int max_connection_count = 0;
+
+#define GET_PARAM(PARAM,I)	if(argc >= I+1) PARAM = argv[I];
+#define GET_PARAM_INT(PARAM,I)	if(argc >= I+1) PARAM = atoi(argv[I]);
 
 void cycle_handler(event_t *ev)
 {
 	cycle_t *cycle = (cycle_t*)ev->data;
-	SOCKET fd = socket_connect("tcp",url,1);
+
+	if(max_connection_count > 0 && cycle->connection_count >= max_connection_count)
+	{
+		LOGD("connection count:%d\n",cycle->connection_count);
+		timer_add(cycle,ev,10000);
+		return;
+	}
+
+	SOCKET fd = socket_connect("tcp",url,blocking);
 	if(fd == -1){
-		if(errno == EADDRNOTAVAIL)
+		if(SOCKET_ERRNO == SEADDRNOTAVAIL)
 		{
 			return ;
 		}
-		timer_add(cycle,ev,5000);
+		timer_add(cycle,ev,1000);
 		return;
+	}
+	if(!blocking)
+	{
+		socket_nonblocking(fd);
 	}
 	// LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
@@ -75,12 +92,26 @@ void cycle_handler(event_t *ev)
 	event_add(cycle,ev);
 }
 
+void print()
+{
+	LOGD("ngx_rbtree_node_t:%d\n",sizeof(ngx_rbtree_node_t));
+	LOGD("ngx_queue_t:%d\n",sizeof(ngx_queue_t));
+	LOGD("event_t:%d\n",sizeof(event_t));
+	LOGD("socket_t:%d\n",sizeof(socket_t));
+	LOGD("cycle_t:%d\n",sizeof(cycle_t));
+	LOGD("cycle_slave_t:%d\n",sizeof(cycle_slave_t));
+	LOGD("connection_t:%d\n",sizeof(connection_t));
+	LOGD("loopqueue_t:%d\n",sizeof(loopqueue_t));
+}
+
 int main(int argc,char* argv[])
 {
-	if(argc >= 2)
-	{
-		url = argv[1];
-	}
+	print();
+
+	GET_PARAM(url,1);
+	GET_PARAM_INT(blocking,2);
+	GET_PARAM_INT(max_connection_count,3);
+
 	os_init();
 	socket_init();
 	ngx_time_init();

@@ -21,7 +21,7 @@ void accept_event_handler(event_t *ev)
 		{
 			if(count == 0)
 			{
-				LOGE("accept errno:%d\n",errno);
+				LOGE("accept errno:%d\n",SOCKET_ERRNO);
 			}
 			break;
 		}
@@ -43,7 +43,7 @@ void accept_handler(event_t *ev)
 	int ret = listen(fd,MAX_FD_COUNT);
 	if(ret == -1)
 	{
-		LOGE("listen errno:%d\n",errno);
+		LOGE("listen errno:%d\n",SOCKET_ERRNO);
 		close(fd);
 		return ;
 	}
@@ -96,8 +96,22 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 	return 0;
 }
 
+void print()
+{
+	LOGD("ngx_rbtree_node_t:%d\n",sizeof(ngx_rbtree_node_t));
+	LOGD("ngx_queue_t:%d\n",sizeof(ngx_queue_t));
+	LOGD("event_t:%d\n",sizeof(event_t));
+	LOGD("socket_t:%d\n",sizeof(socket_t));
+	LOGD("cycle_t:%d\n",sizeof(cycle_t));
+	LOGD("cycle_slave_t:%d\n",sizeof(cycle_slave_t));
+	LOGD("connection_t:%d\n",sizeof(connection_t));
+	LOGD("loopqueue_t:%d\n",sizeof(loopqueue_t));
+}
+
 int main(int argc,char* argv[])
 {
+	print();
+
 	os_init();
 	socket_init();
 	ngx_time_init();
@@ -105,7 +119,7 @@ int main(int argc,char* argv[])
 	cycle_t *cycle = cycle_create(MAX_FD_COUNT);
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
-
+	cycle->index = 0;
 	int max_thread_count = (ngx_ncpu - 1)*2;
 	if(max_thread_count > 0)
 	{

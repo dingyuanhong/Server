@@ -200,6 +200,10 @@ inline int connection_remove_default(connection_t * c)
 static inline int cycle_process_master(cycle_t * cycle)
 {
 	LOGD("cycle_process_master begin.\n");
+	if(cycle->index != -1)
+	{
+		thread_affinity_cpu(cycle->index);
+	}
 	while(!cycle->stop){
 		ngx_time_update();
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
