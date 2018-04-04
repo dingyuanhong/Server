@@ -22,7 +22,7 @@ int socket_init()
 	{
 		unsigned long ul=1;
 		int ret=ioctlsocket(sock,FIONBIO,(unsigned long *)&ul);
-		if(ret==SOCKET_ERROR)
+		if(ret== SOCKET_ERROR)
 		{
 			LOGE("ioctlsocket FIONBIO failed.%d",WSAGetLastError());
 		}
@@ -32,7 +32,7 @@ int socket_init()
 	{
 		unsigned long ul=0;
 		int ret=ioctlsocket(sock,FIONBIO,(unsigned long *)&ul);
-		if(ret==SOCKET_ERROR)
+		if(ret== SOCKET_ERROR)
 		{
 			LOGE("ioctlsocket FIONBIO failed.%d",WSAGetLastError());
 		}
@@ -346,7 +346,7 @@ int socket_recvtimeout(SOCKET socket, int timeout)
 		free(addr_ptr);
 	}
 	if(ret != 0) {
-		LOGE("bind (%s) errno:%d\n",addr,SOCKET_ERRNO);
+		LOGE("bind (%s) errno:%d\n",addr,_ERRNO);
 		close(s);
 		s = -1;
 	}
@@ -371,9 +371,9 @@ int socket_recvtimeout(SOCKET socket, int timeout)
 		free(addr_ptr);
 	}
 	if(ret != 0){
-		if(!(SEINPROGRESS == SOCKET_ERRNO || SEWOULDBLOCK == SOCKET_ERRNO))
+		if(!(_ERROR(EINPROGRESS) == _ERRNO || _ERROR(EWOULDBLOCK) == _ERRNO))
 		{
-			LOGE("connect (%s) errno:%d\n",addr,SOCKET_ERRNO);
+			LOGE("connect (%s) errno:%d\n",addr,_ERRNO);
 			close(s);
 			s = -1;
 		}

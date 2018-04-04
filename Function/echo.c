@@ -21,17 +21,16 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 	{
 		connection_close(c);
 		return -1;
-	}else if(ret == -1)
+	}else
 	{
-		if(SOCKET_ERRNO == SEWOULDBLOCK)
+		if(_ERRNO == _ERROR(EWOULDBLOCK))
 		{
 			return 0;
 		}
-		LOGE("recv error:%d errno:%d\n",ret,SOCKET_ERRNO);
+		LOGE("recv error:%d errno:%d\n",ret,_ERRNO);
 		connection_close(c);
 		return -1;
 	}
-	return 0;
 }
 
 int buffer_write(connection_t * c,char * byte,size_t len)
@@ -50,11 +49,11 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 			size += ret;
 			continue;
 		}else if(ret == -1){
-			if(SOCKET_ERRNO == SEWOULDBLOCK)
+			if(_ERRNO == _ERROR(EWOULDBLOCK))
 			{
 				break;
 			}
-			LOGE("send error:%d errno:%d\n",ret,SOCKET_ERRNO);
+			LOGE("send error:%d errno:%d\n",ret,_ERRNO);
 			connection_close(c);
 			return -1;
 		}else{
@@ -108,7 +107,8 @@ void echo_read_event_handler(event_t *ev)
 		{
 			return;
 		}
-		// queue_wpush(&echo->queue,ret);
+		queue_wpush(&echo->queue,ret);
+		event_add(c->cycle,c->so.write);
 	}
 }
 
@@ -116,18 +116,23 @@ void echo_write_event_handler(event_t *ev)
 {
 	echo_t * echo = (echo_t*)ev->data;
 	connection_t *c = (connection_t*)echo->c;
-
+	event_del(c->cycle,c->so.write);
+	timer_del(c->cycle,c->so.write);
 	// while(1)
 	{
 		void * buffer = queue_r(&echo->queue);
 		int size = queue_rsize(&echo->queue);
-		if(buffer == NULL || size <= 0) return;
+		if(buffer == NULL || size <= 0)
+		{
+			return;
+		}
 		int ret = buffer_write(c,buffer,size);
 		if(ret <= 0)
 		{
 			return;
 		}
 		queue_rpush(&echo->queue,ret);
+		event_add(c->cycle,c->so.write);
 	}
 }
 

@@ -66,7 +66,7 @@ void cycle_handler(event_t *ev)
 
 	SOCKET fd = socket_connect("tcp",url,blocking);
 	if(fd == -1){
-		if(SOCKET_ERRNO == SEADDRNOTAVAIL)
+		if(_ERRNO == _ERROR(EADDRNOTAVAIL))
 		{
 			return ;
 		}

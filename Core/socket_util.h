@@ -69,17 +69,11 @@ SOCKET socket_bind(const char * type,const char * addr);
 SOCKET socket_connect(const char * type,const char * addr,int nonblocking);
 
 #ifdef _WIN32
-#define SOCKET_ERRNO WSAGetLastError()
-
-#define SEADDRNOTAVAIL WSAEADDRNOTAVAIL
-#define SEINPROGRESS WSAEINPROGRESS
-#define SEWOULDBLOCK WSAEWOULDBLOCK
+#define _ERRNO WSAGetLastError()
+#define _ERROR(no) WSA##no
 #else
-#define SOCKET_ERRNO errno
-
-#define SEADDRNOTAVAIL EADDRNOTAVAIL
-#define SEINPROGRESS EINPROGRESS
-#define SEWOULDBLOCK EWOULDBLOCK
+#define _ERRNO errno
+#define _ERROR(no) no
 #endif
 
 #endif

@@ -21,7 +21,7 @@ void accept_event_handler(event_t *ev)
 		{
 			if(count == 0)
 			{
-				LOGE("accept errno:%d\n",SOCKET_ERRNO);
+				LOGE("accept errno:%d\n",_ERRNO);
 			}
 			break;
 		}
@@ -43,7 +43,7 @@ void accept_handler(event_t *ev)
 	int ret = listen(fd,MAX_FD_COUNT);
 	if(ret == -1)
 	{
-		LOGE("listen errno:%d\n",SOCKET_ERRNO);
+		LOGE("listen errno:%d\n",_ERRNO);
 		close(fd);
 		return ;
 	}
