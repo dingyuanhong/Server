@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 
 typedef int SOCKET;
 
@@ -38,7 +39,8 @@ int socket_recvbuf(SOCKET socket,int size);
 int socket_linger(SOCKET socket,int onoff,int linger);
 int socket_sendtimeout(SOCKET socket, int timeout);
 int socket_recvtimeout(SOCKET socket, int timeout);
-
+int socket_sendbuf_size(SOCKET socket);
+int socket_recvbuf_size(SOCKET socket);
 
 
 #ifndef _WIN32

@@ -128,7 +128,7 @@ inline int connection_close_object(connection_t *c)
 		connection_destroy(&c);
 		return 0;
 	}else{
-		LOGD("connection closing:%d errorno:%d\n",so,errno);
+		LOGD("connection closing:%d errno:%d\n",so,_ERRNO);
 		return -1;
 	}
 }
@@ -161,7 +161,7 @@ static inline int connection_close(connection_t * c)
 	if(ret == 0){
 		connection_close_self(c);
 	}else{
-		LOGD("connection close %d errno:%d\n",ret,errno);
+		LOGD("connection close %d errno:%d\n",ret,_ERRNO);
 	}
 	return ret;
 }

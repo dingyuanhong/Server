@@ -148,8 +148,38 @@ int socket_init()
 	}
 #endif
 
-
-
+int socket_sendbuf_size(SOCKET socket)
+{
+	int value = 0;
+	int error = 0;
+	#ifdef SIOCOUTQ
+	error = ioctl(socket, SIOCOUTQ, &value);
+	#elif defined(TIOCOUTQ)
+	error = ioctl(socket, TIOCOUTQ, &value);
+	#endif
+	if(error < 0)
+	{
+		LOGE("IOCOUTQ errno:%d\n",_ERRNO);
+		return -1;
+	}
+	return value;
+}
+int socket_recvbuf_size(SOCKET socket)
+{
+	int value = 0;
+	int error = 0;
+	#ifdef SIOCINQ
+	error = ioctl(socket, SIOCINQ, &value);
+	#elif defined(TIOCINQ)
+	error = ioctl(socket, TIOCINQ, &value);
+	#endif
+	if(error < 0)
+	{
+		LOGE("IOCOUTQ errno:%d\n",_ERRNO);
+		return -1;
+	}
+	return value;
+}
 int socket_sendbuf(SOCKET socket,int size)
 {
 	return setsockopt(socket,SOL_SOCKET,SO_SNDBUF,(const char*)&size,sizeof(int));

@@ -25,10 +25,13 @@ void accept_event_handler(event_t *ev)
 			}
 			break;
 		}
-		count++;
-
 		// socket_nonblocking(afd);
 		cycle_thread_post(c->cycle,afd);
+		count++;
+		if(count >= 1000)
+		{
+			break;
+		}
 	}
 }
 
@@ -63,7 +66,8 @@ void accept_connection(connection_t *conn)
 	service_init(conn);
 	// if(conn->so.read == NULL) conn->so.read = event_create(connection_close_event_handler,conn);
 	// if(conn->so.error == NULL) conn->so.error = event_create(connection_close_event_handler,conn);
-	int ret = connection_cycle_add(conn);
+	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
+	// int ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 

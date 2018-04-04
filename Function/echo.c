@@ -35,32 +35,24 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 
 int buffer_write(connection_t * c,char * byte,size_t len)
 {
-	int size = 0;
-	while(1){
-		int ret = send(c->so.handle,byte,len,0);
-		if(ret == len)
+	int ret = send(c->so.handle,byte,len,0);
+	if(ret == len)
+	{
+		return ret;
+	}else if(ret > 0)
+	{
+		return ret;
+	}else if(ret == -1)
+	{
+		if(_ERRNO == _ERROR(EWOULDBLOCK))
 		{
-			size += ret;
-			break;
-		}else if(ret > 0)
-		{
-			byte += ret;
-			len -= ret;
-			size += ret;
-			continue;
-		}else if(ret == -1){
-			if(_ERRNO == _ERROR(EWOULDBLOCK))
-			{
-				break;
-			}
-			LOGE("send error:%d errno:%d\n",ret,_ERRNO);
-			connection_close(c);
-			return -1;
-		}else{
-			break;
+			return 0;
 		}
+		LOGE("send error:%d errno:%d\n",ret,_ERRNO);
+		connection_close(c);
+		return -1;
 	}
-	return size;
+	return 0;
 }
 
 
@@ -103,11 +95,32 @@ void echo_read_event_handler(event_t *ev)
 		int size = queue_wsize(&echo->queue);
 		if(buffer == NULL || size <= 0) return;
 		int ret = buffer_read(c,buffer,size);
-		if(ret <= 0)
+		if(ret < 0)
 		{
 			return;
 		}
+		if(ret == 0)
+		{
+			timer_add(c->cycle,c->so.read,1000*1000);
+			return;
+		}
 		queue_wpush(&echo->queue,ret);
+		if(ret == size)
+		{
+			// 获取接受缓冲区数据大小
+			if(socket_recvbuf_size(c->so.handle) > 0)
+			{
+				// 获取
+				size = queue_wsize(&echo->queue);
+				if(size > 0)
+				{
+					event_add(c->cycle,c->so.read);
+				}else
+				{
+					timer_add(c->cycle,c->so.read,1000*1000);
+				}
+			}
+		}
 		event_add(c->cycle,c->so.write);
 	}
 }
@@ -127,12 +140,21 @@ void echo_write_event_handler(event_t *ev)
 			return;
 		}
 		int ret = buffer_write(c,buffer,size);
-		if(ret <= 0)
+		if(ret < 0)
 		{
 			return;
 		}
+		if(ret == 0)
+		{
+			timer_add(c->cycle,c->so.write,100);
+			return;
+		}
 		queue_rpush(&echo->queue,ret);
-		event_add(c->cycle,c->so.write);
+		size = queue_rsize(&echo->queue);
+		if(size > 0)
+		{
+			event_add(c->cycle,c->so.write);
+		}
 	}
 }
 
