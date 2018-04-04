@@ -19,7 +19,7 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 	}
 	else if(ret == 0)
 	{
-		connection_close(c);
+		connection_remove_default(c);
 		return -1;
 	}else
 	{
@@ -28,7 +28,7 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 			return 0;
 		}
 		LOGE("recv error:%d errno:%d\n",ret,_ERRNO);
-		connection_close(c);
+		connection_remove_default(c);
 		return -1;
 	}
 }
@@ -49,7 +49,7 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 			return 0;
 		}
 		LOGE("send error:%d errno:%d\n",ret,_ERRNO);
-		connection_close(c);
+		connection_remove_default(c);
 		return -1;
 	}
 	return 0;

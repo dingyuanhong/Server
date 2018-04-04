@@ -169,7 +169,11 @@ static inline int connection_close(connection_t * c)
 static inline void connection_close_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	connection_close(c);
+	int ret = connection_close(c);
+	if(ret != 0)
+	{
+		event_add(c->cycle,ev);
+	}
 }
 
 //remove connection
