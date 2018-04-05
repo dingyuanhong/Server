@@ -10,6 +10,6 @@
 	del /q UpgradeLog*.htm
 )
 
-@%BUILD% server.sln /build "Debug|Win32" /project core
-@%BUILD% server.sln /build "Debug|Win32" /project client
-@%BUILD% server.sln /build "Debug|Win32" /project server
+@%BUILD% server.sln /build "Debug|Win32" /project core /Out core.log
+@%BUILD% server.sln /build "Debug|Win32" /project client /Out client.log
+@%BUILD% server.sln /build "Debug|Win32" /project server /Out server.log
