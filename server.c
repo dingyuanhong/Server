@@ -12,7 +12,8 @@ void accept_event_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
 	int count = 0;
-	while(1){
+	// while(1)
+	{
 		struct sockaddr_in addr;
 		socklen_t len = sizeof(struct sockaddr_in);
 		// LOGD("accept %d ...\n",c->so.handle);
@@ -23,14 +24,14 @@ void accept_event_handler(event_t *ev)
 			{
 				LOGE("accept errno:%d\n",_ERRNO);
 			}
-			break;
+			return;
 		}
 		// socket_nonblocking(afd);
 		cycle_thread_post(c->cycle,afd);
 		count++;
 		if(count >= 1000)
 		{
-			break;
+			return;
 		}
 	}
 }
@@ -67,7 +68,8 @@ void accept_connection(connection_t *conn)
 	// if(conn->so.read == NULL) conn->so.read = event_create(connection_error_handle,conn);
 	// if(conn->so.error == NULL) conn->so.error = event_create(connection_error_handle,conn);
 #ifdef NGX_FLAGS_ET
-	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
+	// int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
+	int ret = connection_cycle_add(conn);
 #else
 	int ret = connection_cycle_add(conn);
 #endif

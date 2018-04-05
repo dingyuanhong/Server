@@ -190,7 +190,9 @@ static inline void connection_remove(connection_t * c)
 	ASSERT(c != NULL);
 	ASSERT(c->so.error != NULL);
 	// event_add(c->cycle,c->so.error);
-	ngx_post_event(c->so.error,&c->cycle->internal_posted);
+	if(!event_is_add(c->sycle,c->so.error)){
+		ngx_post_event(c->so.error,&c->cycle->internal_posted);
+	}
 }
 
 //remove connection
@@ -212,7 +214,7 @@ static inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt
 
 static inline int cycle_process(cycle_t * cycle)
 {
-	LOGD("cycle_process_master begin.\n");
+	LOGD("cycle_process begin(%d).\n",cycle->index);
 	if(cycle->index != -1)
 	{
 		thread_affinity_cpu(cycle->index);
@@ -266,7 +268,7 @@ static inline int cycle_process(cycle_t * cycle)
 			break;
 		}
 	}
-	LOGD("cycle_process_master end.\n");
+	LOGD("cycle_process end(%d).\n",cycle->index);
 	return 0;
 }
 
