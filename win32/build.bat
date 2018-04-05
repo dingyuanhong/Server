@@ -1,10 +1,8 @@
-@if '%VS120COMNTOOLS%' == '' (
+@if not '%VS120COMNTOOLS%' == '' (
 	set BUILD="%VS120COMNTOOLS%/../IDE/devenv.exe"
 ) else (
 	set BUILD="%VS140COMNTOOLS%/../IDE/devenv.exe"
 )
-
-@set BUILD="%TOOLS%/devenv.exe"
 
 @if '%VS120COMNTOOLS%' == '' (
 	%BUILD% server.sln /Upgrade
