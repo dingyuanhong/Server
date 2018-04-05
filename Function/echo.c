@@ -96,15 +96,19 @@ void echo_read_event_handler(event_t *ev)
 	{
 		void * buffer = queue_w(&echo->queue);
 		int size = queue_wsize(&echo->queue);
-		if(buffer == NULL || size <= 0) return;
+		if(buffer == NULL || size <= 0){
+
+			return;
+		}
 		int ret = buffer_read(c,buffer,size);
 		if(ret < 0)
 		{
+			timer_add(c->cycle,c->so.read,1000);
 			return;
 		}
 		if(ret == 0)
 		{
-			timer_add(c->cycle,c->so.read,1000*1000);
+			timer_add(c->cycle,c->so.read,1000);
 			return;
 		}
 		queue_wpush(&echo->queue,ret);
@@ -121,13 +125,14 @@ void echo_read_event_handler(event_t *ev)
 						event_add(c->cycle,c->so.read);
 				}else
 				{
-					timer_add(c->cycle,c->so.read,1000*1000);
+					event_add(c->cycle,c->so.read);
 				}
 			}
 		}
 		if(!event_is_add(c->cycle,c->so.write))
 			event_add(c->cycle,c->so.write);
 	}
+	timer_add(c->cycle,c->so.read,1000);
 }
 
 void echo_write_event_handler(event_t *ev)
@@ -181,4 +186,5 @@ void echo_init(connection_t * c)
 	c->so.read = event_create(echo_read_event_handler,echo);
 	c->so.write = event_create(echo_write_event_handler,echo);
 	c->so.error = event_create(echo_error_event_handler,echo);
+	timer_add(c->cycle,c->so.read,1000);
 }

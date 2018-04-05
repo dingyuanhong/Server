@@ -68,8 +68,8 @@ void accept_connection(connection_t *conn)
 	// if(conn->so.read == NULL) conn->so.read = event_create(connection_error_handle,conn);
 	// if(conn->so.error == NULL) conn->so.error = event_create(connection_error_handle,conn);
 #ifdef NGX_FLAGS_ET
-	// int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
-	int ret = connection_cycle_add(conn);
+	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
+	// int ret = connection_cycle_add(conn);
 #else
 	int ret = connection_cycle_add(conn);
 #endif
