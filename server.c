@@ -55,7 +55,7 @@ void accept_handler(event_t *ev)
 	connection_t *conn = connection_create(cycle,fd);
 	conn->so.read = event_create(accept_event_handler,conn);
 	conn->so.write = NULL;
-	conn->so.error = event_create(connection_close_event_handler,conn);
+	conn->so.error = event_create(connection_error_handle,conn);
 	ret = connection_cycle_add(conn);
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
@@ -64,10 +64,13 @@ void accept_connection(connection_t *conn)
 {
 	ASSERT(conn != NULL);
 	service_init(conn);
-	// if(conn->so.read == NULL) conn->so.read = event_create(connection_close_event_handler,conn);
-	// if(conn->so.error == NULL) conn->so.error = event_create(connection_close_event_handler,conn);
+	// if(conn->so.read == NULL) conn->so.read = event_create(connection_error_handle,conn);
+	// if(conn->so.error == NULL) conn->so.error = event_create(connection_error_handle,conn);
+#ifdef NGX_FLAGS_ET
 	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,NGX_FLAGS_ET);
-	// int ret = connection_cycle_add(conn);
+#else
+	int ret = connection_cycle_add(conn);
+#endif
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
 }
 
@@ -133,7 +136,7 @@ int main(int argc,char* argv[])
 
 	event_t *process = event_create(accept_handler,cycle);
 	event_add(cycle,process);
-	cycle_process_master(cycle);
+	cycle_process(cycle);
 
 	if(cycle->data != NULL)
 	{

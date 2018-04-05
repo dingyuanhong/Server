@@ -14,6 +14,9 @@ void heartbeat_event_handler(event_t *ev)
 	if(ret != -1)
 	{
 		timer_add(c->cycle,c->so.write,1000);
+	}else
+	{
+		event_add(c->cycle,c->so.read);
 	}
 }
 
@@ -25,13 +28,16 @@ void discard_read_event_handler(event_t *ev)
 	while(1)
 	{
 		int ret = buffer_read(c,byte,len);
-		if(ret <= 0)
+		if(ret < 0)
 		{
 			break;
 		}
-		if(ret == len)
+		else if(ret == len)
 		{
 			continue;
+		}else if(ret == 0)
+		{
+			timer_add(c->cycle,c->so.read,10);
 		}
 		break;
 	}
@@ -42,7 +48,7 @@ void control_init(connection_t * c)
 	ASSERT(c != NULL);
 	c->so.write = event_create(heartbeat_event_handler,c);
 	c->so.read = event_create(discard_read_event_handler,c);
-	c->so.error = event_create(connection_close_event_handler,c);
+	c->so.error = event_create(connection_error_handle,c);
 }
 
 #define MAX_FD_COUNT 1024*1024
@@ -80,12 +86,13 @@ void cycle_handler(event_t *ev)
 	// LOGD("socket connect %d\n",fd);
 	connection_t *conn = connection_create(cycle,fd);
 	control_init(conn);
-	int ret = connection_cycle_add_(conn,NGX_READ_EVENT,0);
+	int ret = 0;
+	connection_cycle_queue_add(conn);
+	// ret = connection_cycle_add_(conn,NGX_READ_EVENT,0);
 	ASSERT(ret == 0);
 	if(ret != 0)
 	{
-		ret  = connection_close_object(conn);
-		ASSERT(ret == 0);
+		connection_clear(conn);
 	}else{
 		timer_add(conn->cycle,conn->so.write,1000);
 	}
@@ -123,7 +130,7 @@ int main(int argc,char* argv[])
 
 	event_t *process = event_create(cycle_handler,cycle);
 	event_add(cycle,process);
-	cycle_process_master(cycle);
+	cycle_process(cycle);
 	event_destroy(&process);
 	cycle_destroy(&cycle);
 	return 0;

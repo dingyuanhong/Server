@@ -8,6 +8,8 @@ typedef void (*LOG_PRINTF)(const char * file,int line,const char * func,int leve
 extern LOG_PRINTF G_LOG_PRINTF;
 LOG_PRINTF set_log_printf(LOG_PRINTF log);
 
+#define DEBUG
+
 #ifdef NO_LOG
 	#define LOG
 #else
@@ -29,9 +31,14 @@ LOG_PRINTF set_log_printf(LOG_PRINTF log);
 #define LOG_ERROR 0x40  //错误
 #define LOG_ASSERT 0x80 //断言
 #define LOG_ABORT 0x100	//终止
-#
-#define LOGE(FMT,...) LOG(LOG_ERROR,FMT,##__VA_ARGS__)
+
+#ifndef DEBUG
+#define LOGD
+#else
 #define LOGD(FMT,...) LOG(LOG_DEBUG,FMT,##__VA_ARGS__)
+#endif
+
+#define LOGE(FMT,...) LOG(LOG_ERROR,FMT,##__VA_ARGS__)
 #define LOGI(FMT,...) LOG(LOG_INFO,FMT,##__VA_ARGS__)
 
 #define LOGA(_exp,FMT,...) if((!(_exp))){ LOG(LOG_ASSERT, FMT,##__VA_ARGS__);}

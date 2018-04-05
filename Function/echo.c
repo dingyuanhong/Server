@@ -19,7 +19,7 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 	}
 	else if(ret == 0)
 	{
-		connection_remove_default(c);
+		connection_remove(c);
 		return -1;
 	}else
 	{
@@ -28,7 +28,7 @@ int buffer_read(connection_t * c,char *byte,size_t len)
 			return 0;
 		}
 		LOGE("recv error:%d errno:%d\n",ret,_ERRNO);
-		connection_remove_default(c);
+		connection_remove(c);
 		return -1;
 	}
 }
@@ -49,7 +49,7 @@ int buffer_write(connection_t * c,char * byte,size_t len)
 			return 0;
 		}
 		LOGE("send error:%d errno:%d\n",ret,_ERRNO);
-		connection_remove_default(c);
+		connection_remove(c);
 		return -1;
 	}
 	return 0;
@@ -89,6 +89,9 @@ void echo_read_event_handler(event_t *ev)
 	echo_t * echo = (echo_t*)ev->data;
 	connection_t *c = (connection_t*)echo->c;
 
+	event_del(c->cycle,c->so.read);
+	timer_del(c->cycle,c->so.read);
+
 	// while(1)
 	{
 		void * buffer = queue_w(&echo->queue);
@@ -114,14 +117,16 @@ void echo_read_event_handler(event_t *ev)
 				size = queue_wsize(&echo->queue);
 				if(size > 0)
 				{
-					event_add(c->cycle,c->so.read);
+					if(!event_is_add(c->cycle,c->so.read))
+						event_add(c->cycle,c->so.read);
 				}else
 				{
 					timer_add(c->cycle,c->so.read,1000*1000);
 				}
 			}
 		}
-		event_add(c->cycle,c->so.write);
+		if(!event_is_add(c->cycle,c->so.write))
+			event_add(c->cycle,c->so.write);
 	}
 }
 
@@ -153,7 +158,8 @@ void echo_write_event_handler(event_t *ev)
 		size = queue_rsize(&echo->queue);
 		if(size > 0)
 		{
-			event_add(c->cycle,c->so.write);
+			if(!event_is_add(c->cycle,c->so.write))
+				event_add(c->cycle,c->so.write);
 		}
 	}
 }
@@ -162,10 +168,10 @@ void echo_error_event_handler(event_t * ev)
 {
 	echo_t * echo = (echo_t*)ev->data;
 	connection_t *c = (connection_t*)echo->c;
-	echo_destroy(&echo);
-	c->so.error->handler = connection_close_event_handler;
-	c->so.error->data = c;
-	event_add(c->cycle,c->so.error);
+	if(connection_del(c) == 0)
+	{
+		echo_destroy(&echo);
+	}
 }
 
 void echo_init(connection_t * c)

@@ -163,7 +163,7 @@ int select_module_process(select_module_t * module,int milliseconds)
 		return -1;
 	}
 	module->events_count = n;
-	module->process->handler(module->process);
+	event_handle(module->process);
 	return module->events_count ;
 }
 
@@ -181,21 +181,22 @@ void select_module_event_handler(event_t *ev)
 			continue;
 		}
 		socket_t *so = (socket_t*)event->data;
+		if(so == NULL) continue;
 		ASSERT(so != NULL);
 		if(so->read == event)
 		{
 			if(FD_ISSET(so->handle,&module->read_set)){
-				so->read->handler(so->read);
+				event_handle(so->read);
 				module->events_count--;
 			}
 		}else if(so->write == event){
 			if(FD_ISSET(so->handle,&module->write_set)){
-				so->write->handler(so->write);
+				event_handle(so->write);
 				module->events_count--;
 			}
 		}else if(so->error == event){
 			if(FD_ISSET(so->handle,&module->except_set)){
-				so->error->handler(so->error);
+				event_handle(so->error);
 				module->events_count--;
 			}
 		}

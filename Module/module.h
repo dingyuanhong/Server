@@ -7,23 +7,24 @@
 #include "ngx_event_timer.h"
 #include "ngx_event_posted.h"
 
-#define connection_cycle_queue_add(conn)                                     		\
+#define connection_cycle_queue_add(conn)                                    \
     if (ngx_queue_empty(&conn->queue)) {                                    \
+		conn->cycle->connection_count++;									\
         ngx_queue_insert_tail(&conn->cycle->connection_queue, &conn->queue);\
     } else  {                                                               \
 		LOGE("ngx_post_event already posted.\n");							\
     }
 
-#define connection_cycle_queue_del(conn)                                           \
-    ngx_queue_remove(&conn->queue);											 \
-	ngx_queue_init(&conn->queue);
+#define connection_cycle_queue_del(conn)                                     \
+    {ngx_queue_remove(&conn->queue);											 \
+	ngx_queue_init(&conn->queue);											 \
+	conn->cycle->connection_count--;}
 
 inline int connection_cycle_add_(connection_t *conn,int event,int flags)
 {
 	int ret =  action_add(conn->cycle->core,&conn->so,event,flags);
 	if(ret == 0)
 	{
-		conn->cycle->connection_count++;
 		connection_cycle_queue_add(conn);
 	}
 	return ret;
@@ -39,30 +40,28 @@ inline int connection_cycle_del(connection_t *conn)
 	int ret = action_del(conn->cycle->core,&conn->so);
 	if(ret == 0)
 	{
-		conn->cycle->connection_count--;
 		connection_cycle_queue_del(conn);
 	}
 	return ret;
 }
 
-
-#define event_add(cycle,ev) ASSERT(ev != NULL);ngx_post_event(ev,&cycle->posted)
+#define event_is_add(cycle,ev) ((ev)->posted == 1)
+#define event_add(cycle,ev) {ASSERT(ev != NULL);ngx_post_event(ev,&cycle->posted);}
 #define event_del(cycle,ev) if(ev != NULL){ngx_delete_posted_event(ev);}
-#define connection_event_del(conn) event_del(conn->cycle,conn->so.read); \
+#define connection_event_del(conn) {event_del(conn->cycle,conn->so.read); \
 							event_del(conn->cycle,conn->so.write); \
-							event_del(conn->cycle,conn->so.error);
+							event_del(conn->cycle,conn->so.error);}
 
-#define timer_add(cycle,ev,time) ASSERT(ev!=NULL);ngx_event_add_timer(&cycle->timeout,ev,time)
+#define timer_add(cycle,ev,time) {ASSERT(ev!=NULL);ngx_event_add_timer(&cycle->timeout,ev,time);}
 #define timer_del(cycle,ev) if(ev != NULL){ngx_event_del_timer(&cycle->timeout,ev);}
-#define connection_timer_del(conn) timer_del(conn->cycle,conn->so.read); \
+#define connection_timer_del(conn) {timer_del(conn->cycle,conn->so.read); \
 							timer_del(conn->cycle,conn->so.write); \
-							timer_del(conn->cycle,conn->so.error);
+							timer_del(conn->cycle,conn->so.error);}
 
 
 
 #define timer_is_empty(cycle) (cycle->timeout.root == cycle->timeout.sentinel)
 #define event_is_empty(cycle) ngx_queue_empty(&cycle->posted)
-
 
 //slave safe
 
@@ -95,7 +94,7 @@ static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_
 	ngx_unlock(&cycle->accept_posted_lock);
 }
 
-inline void safe_process_event(cycle_t *cycle)
+static inline void safe_process_event(cycle_t *cycle)
 {
 	if(cycle->accept_posted_index > 0)
 	{
@@ -113,8 +112,8 @@ inline void safe_process_event(cycle_t *cycle)
 
 
 //close connection
-
-inline int connection_close_object(connection_t *c)
+//释放
+static inline int connection_destroy_object(connection_t *c)
 {
 	ASSERT(c != NULL);
 	SOCKET so = c->so.handle;
@@ -126,6 +125,7 @@ inline int connection_close_object(connection_t *c)
 	if(ret == 0)
 	{
 		connection_destroy(&c);
+		LOGD("connection close:%d\n",so);
 		return 0;
 	}else{
 		LOGD("connection closing:%d errno:%d\n",so,_ERRNO);
@@ -133,54 +133,71 @@ inline int connection_close_object(connection_t *c)
 	}
 }
 
-static inline void connection_close_handler(event_t *ev)
+static inline void connection_destroy_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_close_object(c);
+	int ret = connection_destroy_object(c);
 	if(ret == -1)
 	{
-		event_add(c->cycle,ev);
+		// event_add(c->cycle,ev);
+		ngx_post_event(ev,&c->cycle->internal_posted);
 	}
 }
 
-static inline void connection_close_self(connection_t *c){
+//清理事件
+static inline void connection_clear(connection_t *c){
 	ASSERT(c != NULL);
-	connection_cycle_queue_del(c);
+	// connection_cycle_queue_del(c);
 	connection_event_del(c);
 	connection_timer_del(c);
 
 	ASSERT(c->so.error != NULL);
-	c->so.error->handler = connection_close_handler;
+	c->so.error->handler = connection_destroy_handler;
 	c->so.error->data = c;
-	event_add(c->cycle,c->so.error);
+	// event_add(c->cycle,c->so.error);
+	ngx_post_event(c->so.error,&c->cycle->internal_posted);
 }
 
-static inline int connection_close(connection_t * c)
+static inline void connection_clear_handler(event_t *ev)
 {
+	connection_t *c = (connection_t*)ev->data;
+	connection_clear(c);
+}
+
+static inline int connection_del(connection_t *c){
+	ASSERT(c != NULL);
 	int ret = connection_cycle_del(c);
-	if(ret == 0){
-		connection_close_self(c);
-	}else{
-		LOGD("connection close %d errno:%d\n",ret,_ERRNO);
+	if(ret == 0)
+	{
+		c->so.error->handler = connection_clear_handler;
+		c->so.error->data = c;
 	}
+	// event_add(c->cycle,c->so.error);
+	ngx_post_event(c->so.error,&c->cycle->internal_posted);
 	return ret;
 }
 
-static inline void connection_close_event_handler(event_t *ev)
+static inline void connection_del_handler(event_t *ev)
 {
 	connection_t *c = (connection_t*)ev->data;
-	int ret = connection_close(c);
-	if(ret != 0)
-	{
-		event_add(c->cycle,ev);
-	}
+	connection_del(c);
+}
+
+#define connection_error_handle connection_del_handler
+
+static inline void connection_remove(connection_t * c)
+{
+	ASSERT(c != NULL);
+	ASSERT(c->so.error != NULL);
+	// event_add(c->cycle,c->so.error);
+	ngx_post_event(c->so.error,&c->cycle->internal_posted);
 }
 
 //remove connection
 
-typedef int (*connection_remove_pt)(connection_t * c);
+typedef void (*connection_remove_pt)(connection_t * c);
 
-inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove)
+static inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove)
 {
 	ngx_queue_t *q;
 	connection_t  *conn;
@@ -193,15 +210,7 @@ inline void cycle_remove_connections(cycle_t * cycle,connection_remove_pt remove
 	}
 }
 
-inline int connection_remove_default(connection_t * c)
-{
-	ASSERT(c != NULL);
-	ASSERT(c->so.error != NULL);
-	event_add(c->cycle,c->so.error);
-	return 0;
-}
-
-static inline int cycle_process_master(cycle_t * cycle)
+static inline int cycle_process(cycle_t * cycle)
 {
 	LOGD("cycle_process_master begin.\n");
 	if(cycle->index != -1)
@@ -209,7 +218,11 @@ static inline int cycle_process_master(cycle_t * cycle)
 		thread_affinity_cpu(cycle->index);
 	}
 	while(!cycle->stop){
-		ngx_time_update();
+		if(cycle->master)
+		{
+			ngx_time_update();
+		}
+		
 		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
 		if(!event_is_empty(cycle))
 		{
@@ -227,66 +240,33 @@ static inline int cycle_process_master(cycle_t * cycle)
 		{
 			// LOGD("action_process :%d\n",ret);
 		}
-		ngx_time_update();
+		if(cycle->master)
+		{
+			ngx_time_update();
+		}
 		ngx_event_expire_timers(&cycle->timeout);
 		safe_process_event(cycle);
 		ngx_event_process_posted(&cycle->posted);
 
-		if(cycle->connection_count == 0 && event_is_empty(cycle) && timer_is_empty(cycle))
+		ngx_event_process_posted(&cycle->internal_posted);
+
+		if(cycle->master && 
+			cycle->connection_count == 0 && 
+			event_is_empty(cycle) && timer_is_empty(cycle))
 		{
 			break;
 		}
 	}
-	cycle_remove_connections(cycle,connection_remove_default);
+	cycle_remove_connections(cycle,connection_remove);
 	while(1){
-		ngx_event_process_posted(&cycle->posted);
-		if(event_is_empty(cycle))
+		ngx_event_process_posted(&cycle->internal_posted);
+		if(ngx_queue_empty(&cycle->internal_posted))
+		// if(event_is_empty(cycle))
 		{
 			break;
 		}
 	}
 	LOGD("cycle_process_master end.\n");
-	return 0;
-}
-
-static inline int cycle_process_slave(cycle_t * cycle)
-{
-	LOGD("cycle_process_slave begin %d.\n",cycle->index);
-	if(cycle->index != -1)
-	{
-		thread_affinity_cpu(cycle->index);
-	}
-	while(!cycle->stop){
-		ngx_msec_t timeout = ngx_event_find_timer(&cycle->timeout);
-		if(!event_is_empty(cycle))
-		{
-			timeout = 0;
-		}else
-		if(timeout == NGX_TIMER_INFINITE)
-		{
-			timeout = 10;
-		}
-		int ret = action_process(cycle->core,timeout);
-		if(ret == -1)
-		{
-			break;
-		}else if(ret > 0)
-		{
-			// LOGD("action_process :%d\n",ret);
-		}
-		ngx_event_expire_timers(&cycle->timeout);
-		safe_process_event(cycle);
-		ngx_event_process_posted(&cycle->posted);
-	}
-	cycle_remove_connections(cycle,connection_remove_default);
-	while(1){
-		ngx_event_process_posted(&cycle->posted);
-		if(event_is_empty(cycle))
-		{
-			break;
-		}
-	}
-	LOGD("cycle_process_slave end %d.\n",cycle->index);
 	return 0;
 }
 

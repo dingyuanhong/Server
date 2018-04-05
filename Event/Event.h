@@ -59,4 +59,10 @@ static inline void event_destroy(event_t** event){
 	}
 }
 
+static inline void event_handle(event_t *event)
+{
+	if(event != NULL && event->handler != NULL)
+		event->handler(event);
+}
+
 #endif
