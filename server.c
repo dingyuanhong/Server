@@ -74,6 +74,7 @@ void accept_connection(connection_t *conn)
 	int ret = connection_cycle_add(conn);
 #endif
 	ASSERTIF(ret == 0,"action_add %d errno:%d\n",ret,errno);
+	timer_add(conn->cycle,conn->so.read,10*1000);
 }
 
 void connection_add_event(event_t *ev)
@@ -105,6 +106,62 @@ int cycle_thread_post(cycle_t *cycle,SOCKET fd)
 	return 0;
 }
 
+typedef struct statistics_s{
+	event_t ev;
+	ngx_msec_t time;
+	cycle_t * cycle;
+}statistics_t;
+
+void statistics_event_handler(event_t *ev)
+{
+	statistics_t * st = (statistics_t*)ev->data;
+	cycle_t *cycle = st->cycle;
+	LOGD("%p %d %d\n",cycle,cycle->index,cycle->connection_count);
+	timer_add(cycle,&st->ev,5*1000);
+}
+
+void func_cycle_init(struct cycle_s* cycle)
+{
+	statistics_t * st = (statistics_t*)MALLOC(sizeof(statistics_t));
+	st->time = ngx_current_msec;
+	st->cycle = cycle;
+	event_init(&st->ev, statistics_event_handler, st);
+	timer_add(cycle,&st->ev,1000);
+}
+
+void func_cycle_step(struct cycle_s* cycle)
+{
+}
+
+void func_cycle_over(struct cycle_s* cycle)
+{
+	LOGD("%p %d %d\n",cycle,cycle->index,cycle->connection_count);
+}
+
+void func_cycle_closing(struct cycle_s* cycle)
+{
+	LOGD("%p %d %d\n",cycle,cycle->index,cycle->connection_count);
+}
+
+void func_cycle_end(struct cycle_s* cycle)
+{
+	statistics_t * st = (statistics_t*)cycle->data;
+	if(st != NULL)
+	{
+		FREE(st);
+		cycle->data = NULL;
+	}
+	LOGD("%p %d %d\n",cycle,cycle->index,cycle->connection_count);
+}
+
+static cycle_ptr g_ptr = {
+	func_cycle_init,
+	func_cycle_step,
+	func_cycle_over,
+	func_cycle_closing,
+	func_cycle_end
+};
+
 void print()
 {
 	LOGD("ngx_rbtree_node_t:%d\n",sizeof(ngx_rbtree_node_t));
@@ -125,14 +182,14 @@ int main(int argc,char* argv[])
 	socket_init();
 	ngx_time_init();
 
-	cycle_t *cycle = cycle_create(MAX_FD_COUNT);
+	cycle_t *cycle = cycle_create(MAX_FD_COUNT,&g_ptr);
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
 	cycle->index = 0;
 	int max_thread_count = (ngx_ncpu - 1)*2;
 	if(max_thread_count > 0)
 	{
-		cycle->data = slave_create(MAX_FD_COUNT,max_thread_count);
+		cycle->data = slave_create(MAX_FD_COUNT,max_thread_count,&g_ptr);
 	}
 	signal_init(cycle);
 

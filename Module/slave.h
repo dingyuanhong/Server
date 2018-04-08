@@ -13,6 +13,7 @@ typedef struct cycle_slave_s{
 	int cycle_pool_index;
 	ngx_array_t *cycle_pool;
 	ngx_array_t *thread_pool;
+	cycle_ptr * ptr;
 }cycle_slave_t;
 
 inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
@@ -23,13 +24,14 @@ inline void *ngx_array_get(ngx_array_t *a, ngx_uint_t n)
 	return NULL;
 }
 
-static inline cycle_slave_t *slave_create(int concurrent,int thread_count){
+static inline cycle_slave_t *slave_create(int concurrent,int thread_count,cycle_ptr *ptr){
 	cycle_slave_t * slave = (cycle_slave_t*)MALLOC(sizeof(cycle_slave_t));
 	slave->concurrent = concurrent;
 	slave->max_cycle_count = thread_count;
 	slave->cycle_pool_index = 0;
 	slave->cycle_pool = ngx_array_create(thread_count,sizeof(cycle_t*));
 	slave->thread_pool = ngx_array_create(thread_count,sizeof(uv_thread_t));
+	slave->ptr = ptr;
 	return slave;
 }
 
@@ -64,6 +66,23 @@ static inline void slave_destroy(cycle_slave_t**slave_ptr){
 	*slave_ptr = NULL;
 }
 
+inline void slave_stop(cycle_slave_t*slave)
+{
+	ASSERT(slave != NULL);
+	for(int i = 0 ; i < slave->max_cycle_count;i++)
+	{
+		cycle_t ** cycle_ptr = ngx_array_get(slave->cycle_pool,i);
+
+		if(cycle_ptr != NULL && *cycle_ptr != NULL)
+		{
+			if((*cycle_ptr)->stop != 1)
+			{
+				(*cycle_ptr)->stop = 1;
+			}
+		}
+	}
+}
+
 inline void slave_wait_stop(cycle_slave_t*slave)
 {
 	ASSERT(slave != NULL);
@@ -96,7 +115,7 @@ static inline cycle_t * slave_next_cycle(cycle_slave_t *slave)
 	ABORTI(cycle_ptr == NULL);
 	if(*cycle_ptr == NULL)
 	{
-		cycle_t *cycle = cycle_create(slave->concurrent);
+		cycle_t *cycle = cycle_create(slave->concurrent,slave->ptr);
 		ABORTI(cycle == NULL);
 		ABORTI(cycle->core == NULL);
 		cycle->index = index/2 + 1;

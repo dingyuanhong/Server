@@ -17,7 +17,7 @@ static void signal_handle_term(int sig)
 		if(cycle->data != NULL)
 		{
 			cycle_slave_t * slave = (cycle_slave_t*)cycle->data;
-			slave_wait_stop(slave);
+			slave_stop(slave);
 		}
 		cycle->stop = 1;
 	}

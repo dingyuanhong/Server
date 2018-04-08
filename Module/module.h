@@ -88,24 +88,24 @@ static inline void safe_add_event(cycle_t *cycle,event_t * ev,safe_event_handle_
 	sev->event = ev;
 	sev->handler = handler;
 	event_init(&sev->self,safe_event_handler,sev);
-	ngx_spinlock(&cycle->accept_posted_lock,1,0);
-	ngx_post_event(&sev->self,&cycle->accept_posted);
-	cycle->accept_posted_index += 1;
-	ngx_unlock(&cycle->accept_posted_lock);
+	ngx_spinlock(&cycle->async_posted_lock,1,0);
+	ngx_post_event(&sev->self,&cycle->async_posted);
+	cycle->async_posted_count += 1;
+	ngx_unlock(&cycle->async_posted_lock);
 }
 
 static inline void safe_process_event(cycle_t *cycle)
 {
-	if(cycle->accept_posted_index > 0)
+	if(cycle->async_posted_count > 0)
 	{
-		ngx_spinlock(&cycle->accept_posted_lock,1,0);
+		ngx_spinlock(&cycle->async_posted_lock,1,0);
 		// if(ngx_trylock(&cycle->accept_lock))
 		{
-			ngx_queue_add(&cycle->posted,&cycle->accept_posted);
-			ngx_queue_init(&cycle->accept_posted);
+			ngx_queue_add(&cycle->posted,&cycle->async_posted);
+			ngx_queue_init(&cycle->async_posted);
 
-			cycle->accept_posted_index = 0;
-			ngx_unlock(&cycle->accept_posted_lock);
+			cycle->async_posted_count = 0;
+			ngx_unlock(&cycle->async_posted_lock);
 		}
 	}
 }
@@ -219,6 +219,7 @@ static inline int cycle_process(cycle_t * cycle)
 	{
 		thread_affinity_cpu(cycle->index);
 	}
+	cycle_process_init(cycle);
 	while(!cycle->stop){
 		if(cycle->master)
 		{
@@ -234,14 +235,18 @@ static inline int cycle_process(cycle_t * cycle)
 		{
 			timeout = 10;
 		}
-		int ret = action_process(cycle->core,timeout);
-		if(ret == -1)
+		if(cycle->connection_count > 0)
 		{
-			break;
-		}else if(ret > 0)
-		{
-			// LOGD("action_process :%d\n",ret);
+			int ret = action_process(cycle->core,timeout);
+			if(ret == -1)
+			{
+				break;
+			}else if(ret > 0)
+			{
+				// LOGD("action_process :%d\n",ret);
+			}
 		}
+		
 		if(cycle->master)
 		{
 			ngx_time_update();
@@ -252,6 +257,8 @@ static inline int cycle_process(cycle_t * cycle)
 
 		ngx_event_process_posted(&cycle->internal_posted);
 
+		cycle_process_step(cycle);
+
 		if(cycle->master && 
 			cycle->connection_count == 0 && 
 			event_is_empty(cycle) && timer_is_empty(cycle))
@@ -259,7 +266,9 @@ static inline int cycle_process(cycle_t * cycle)
 			break;
 		}
 	}
+	cycle_process_over(cycle);
 	cycle_remove_connections(cycle,connection_remove);
+	cycle_process_closing(cycle);
 	while(1){
 		ngx_event_process_posted(&cycle->internal_posted);
 		if(ngx_queue_empty(&cycle->internal_posted))
@@ -268,6 +277,7 @@ static inline int cycle_process(cycle_t * cycle)
 			break;
 		}
 	}
+	cycle_process_end(cycle);
 	LOGD("cycle_process end(%d).\n",cycle->index);
 	return 0;
 }

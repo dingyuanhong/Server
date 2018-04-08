@@ -123,7 +123,7 @@ int main(int argc,char* argv[])
 	socket_init();
 	ngx_time_init();
 
-	cycle_t *cycle = cycle_create(MAX_FD_COUNT);
+	cycle_t *cycle = cycle_create(MAX_FD_COUNT,NULL);
 	ABORTI(cycle == NULL);
 	ABORTI(cycle->core == NULL);
 	signal_init(cycle);
